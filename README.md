@@ -1,0 +1,2 @@
+# detection.lua
+yes
