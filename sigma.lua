@@ -8,6 +8,8 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
 -- !!! YOUR SUPABASE CREDENTIALS CONFIGURATION !!!
@@ -15,6 +17,7 @@ local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
 local JobId = game.JobId
+local PlaceId = game.PlaceId
 local Username = LocalPlayer.Name
 local IsAdmin = false 
 
@@ -22,8 +25,17 @@ local rememberedPlayers = {}
 local handledCommands = {} 
 local lastChatTime = 0
 local running = true
+local currentTab = "users" -- "users", "server-chat", "global-chat"
+
 _G.CurrentTpTarget = "none"
 _G.CurrentActiveEffect = "none"
+
+-- Automatically fetch the real name of the current Roblox game
+local gameName = "Roblox Game"
+pcall(function()
+    local info = MarketplaceService:GetProductInfo(PlaceId)
+    gameName = info.Name
+end)
 
 local function getExecutor()
     if identifyexecutor then
@@ -42,35 +54,28 @@ local function sanitizeText(text)
     return clean
 end
 
--- --- LOCAL ACTIONS (FORCED BY BACKEND INTERACTION) ---
-local function executeExplodeScript()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local hrp = char.HumanoidRootPart
-        
-        -- Generate native explosion properties locally on their side
+-- --- LOCAL SPECIAL EFFECTS ---
+local function runLocalExplosionEffect(targetName)
+    local targetPlayer = Players:FindFirstChild(targetName)
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local char = targetPlayer.Character
         local exp = Instance.new("Explosion")
-        exp.Position = hrp.Position
-        exp.BlastRadius = 20
-        exp.BlastPressure = 500000
+        exp.Position = char.HumanoidRootPart.Position
+        exp.BlastRadius = 0 
+        exp.BlastPressure = 0 
         exp.Parent = workspace
         
-        if char:FindFirstChild("Humanoid") then
-            char.Humanoid.Health = 0
+        if char:FindFirstChild("Humanoid") then char.Humanoid.Health = 0 end
+        char:BreakJoints()
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Velocity = Vector3.new(math.random(-100, 100), math.random(80, 150), math.random(-100, 100))
+            end
         end
     end
 end
 
-local function executeKillScript()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        -- Force instant character reset/joint break layout
-        char.Humanoid.Health = 0
-        char:BreakJoints()
-    end
-end
-
--- --- DISCORD THEME UI SETUP ---
+-- --- DISCORD MASTER UI SYSTEM ---
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DiscordNetworkHub"
 ScreenGui.ResetOnSpawn = false
@@ -78,8 +83,8 @@ if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
 ScreenGui.Parent = CoreGui
 
 local WindowFrame = Instance.new("Frame")
-WindowFrame.Size = UDim2.new(0, 650, 0, 440) 
-WindowFrame.Position = UDim2.new(0.5, -325, 0.5, -220)
+WindowFrame.Size = UDim2.new(0, 680, 0, 440) 
+WindowFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
 WindowFrame.BackgroundColor3 = Color3.fromRGB(49, 51, 56) 
 WindowFrame.BorderSizePixel = 0
 WindowFrame.Active = true
@@ -96,7 +101,7 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -100, 1, 0)
 TitleText.Position = UDim2.new(0, 12, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "Discord Sync Hub — " .. JobId:sub(1, 8) .. "..."
+TitleText.Text = "Discord Sync Hub — Cross-Game Network"
 TitleText.TextColor3 = Color3.fromRGB(242, 243, 245)
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 12
@@ -122,7 +127,7 @@ local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(0, 35, 0, 0)
 CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "✕"
+CloseBtn.Text = "X" -- Fix: Changed to clean standard "X" capital letter string
 CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
@@ -135,15 +140,16 @@ BodyFrame.BackgroundTransparency = 1
 BodyFrame.Parent = WindowFrame
 
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 180, 1, 0)
+Sidebar.Size = UDim2.new(0, 190, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(43, 45, 49) 
 Sidebar.Parent = BodyFrame
 
+-- Channel Switcher Elements
 local ChannelUsers = Instance.new("TextButton")
 ChannelUsers.Size = UDim2.new(1, -16, 0, 32)
 ChannelUsers.Position = UDim2.new(0, 8, 0, 12)
 ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
-ChannelUsers.Text = "  #  users-list"
+ChannelUsers.Text = "  #  users-network"
 ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255)
 ChannelUsers.Font = Enum.Font.GothamSemibold
 ChannelUsers.TextSize = 13
@@ -151,24 +157,37 @@ ChannelUsers.TextXAlignment = Enum.TextXAlignment.Left
 ChannelUsers.Parent = Sidebar
 Instance.new("UICorner", ChannelUsers).CornerRadius = UDim.new(0, 4)
 
-local ChannelChat = Instance.new("TextButton")
-ChannelChat.Size = UDim2.new(1, -16, 0, 32)
-ChannelChat.Position = UDim2.new(0, 8, 0, 48)
-ChannelChat.BackgroundTransparency = 1
-ChannelChat.Text = "  #  global-chat"
-ChannelChat.TextColor3 = Color3.fromRGB(148, 155, 164)
-ChannelChat.Font = Enum.Font.GothamSemibold
-ChannelChat.TextSize = 13
-ChannelChat.TextXAlignment = Enum.TextXAlignment.Left
-ChannelChat.Parent = Sidebar
-Instance.new("UICorner", ChannelChat).CornerRadius = UDim.new(0, 4)
+local ChannelServerChat = Instance.new("TextButton")
+ChannelServerChat.Size = UDim2.new(1, -16, 0, 32)
+ChannelServerChat.Position = UDim2.new(0, 8, 0, 48)
+ChannelServerChat.BackgroundTransparency = 1
+ChannelServerChat.Text = "  #  server-chat"
+ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+ChannelServerChat.Font = Enum.Font.GothamSemibold
+ChannelServerChat.TextSize = 13
+ChannelServerChat.TextXAlignment = Enum.TextXAlignment.Left
+ChannelServerChat.Parent = Sidebar
+Instance.new("UICorner", ChannelServerChat).CornerRadius = UDim.new(0, 4)
+
+local ChannelGlobalChat = Instance.new("TextButton")
+ChannelGlobalChat.Size = UDim2.new(1, -16, 0, 32)
+ChannelGlobalChat.Position = UDim2.new(0, 8, 0, 84)
+ChannelGlobalChat.BackgroundTransparency = 1
+ChannelGlobalChat.Text = "  💬  global-cross-chat"
+ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+ChannelGlobalChat.Font = Enum.Font.GothamSemibold
+ChannelGlobalChat.TextSize = 12
+ChannelGlobalChat.TextXAlignment = Enum.TextXAlignment.Left
+ChannelGlobalChat.Parent = Sidebar
+Instance.new("UICorner", ChannelGlobalChat).CornerRadius = UDim.new(0, 4)
 
 local ViewContainer = Instance.new("Frame")
-ViewContainer.Size = UDim2.new(1, -180, 1, 0)
-ViewContainer.Position = UDim2.new(0, 180, 0, 0)
+ViewContainer.Size = UDim2.new(1, -190, 1, 0)
+ViewContainer.Position = UDim2.new(0, 190, 0, 0)
 ViewContainer.BackgroundTransparency = 1
 ViewContainer.Parent = BodyFrame
 
+-- Container Viewports
 local UsersView = Instance.new("ScrollingFrame")
 UsersView.Size = UDim2.new(1, -20, 1, -20)
 UsersView.Position = UDim2.new(0, 10, 0, 10)
@@ -202,7 +221,7 @@ TextBox.Size = UDim2.new(1, 0, 0, 38)
 TextBox.Position = UDim2.new(0, 0, 1, -38)
 TextBox.BackgroundColor3 = Color3.fromRGB(56, 58, 64) 
 TextBox.TextColor3 = Color3.fromRGB(219, 222, 225)
-TextBox.PlaceholderText = "Message #global-chat"
+TextBox.PlaceholderText = "Message..."
 TextBox.Font = Enum.Font.Gotham
 TextBox.TextSize = 14
 TextBox.TextXAlignment = Enum.TextXAlignment.Left
@@ -211,7 +230,7 @@ TextBox.Parent = ChatView
 Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 12)
 Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
 
--- --- EXPANDED DISCORD ADMIN PANEL ---
+-- --- DISCORD ADMIN PANEL ---
 local AdminPanel = Instance.new("Frame")
 AdminPanel.Size = UDim2.new(1, -16, 0, 195)
 AdminPanel.Position = UDim2.new(0, 8, 1, -205)
@@ -284,37 +303,77 @@ ClearCmdBtn.TextSize = 11
 ClearCmdBtn.Parent = AdminPanel
 Instance.new("UICorner", ClearCmdBtn).CornerRadius = UDim.new(0, 4)
 
--- --- VISUAL TEXT INTERFACES ---
-local function systemLog(text, colorStr)
-    local MsgFrame = Instance.new("Frame")
-    MsgFrame.Size = UDim2.new(1, 0, 0, 22)
-    MsgFrame.BackgroundTransparency = 1; MsgFrame.Parent = ChatScrolling
+-- --- WINDOW HANDLERS ---
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true; dragStart = input.Position; startPos = WindowFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
 
-    local MsgLabel = Instance.new("TextLabel")
-    MsgLabel.Size = UDim2.new(1, 0, 1, 0); MsgLabel.BackgroundTransparency = 1
-    MsgLabel.TextXAlignment = Enum.TextXAlignment.Left; MsgLabel.Font = Enum.Font.GothamBold
-    MsgLabel.TextSize = 12; MsgLabel.RichText = true
-    MsgLabel.Text = string.format("<font color='%s'>%s</font>", colorStr or "rgb(150, 150, 150)", text)
-    MsgLabel.Parent = MsgFrame
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    BodyFrame.Visible = not minimized
+    WindowFrame.Size = minimized and UDim2.new(0, 650, 0, 32) or UDim2.new(0, 680, 0, 440)
+    MinBtn.Text = minimized and "🗖" or "—"
+end)
+
+CloseBtn.MouseButton1Click:Connect(function() running = false; ScreenGui:Destroy() end)
+
+-- --- CHANNEL SWITCHERS CONTROLLER ---
+local function selectTab(tab)
+    currentTab = tab
+    ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelServerChat.BackgroundTransparency = 1; ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelGlobalChat.BackgroundTransparency = 1; ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    UsersView.Visible = false; ChatView.Visible = false
+
+    if tab == "users" then
+        ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255)
+        UsersView.Visible = true
+    elseif tab == "server" then
+        ChannelServerChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TextBox.PlaceholderText = "Message #server-chat"
+        ChatView.Visible = true
+    elseif tab == "global" then
+        ChannelGlobalChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TextBox.PlaceholderText = "Message #global-cross-chat"
+        ChatView.Visible = true
+    end
 end
 
+ChannelUsers.MouseButton1Click:Connect(function() selectTab("users") end)
+ChannelServerChat.MouseButton1Click:Connect(function() selectTab("server") end)
+ChannelGlobalChat.MouseButton1Click:Connect(function() selectTab("global") end)
+
+-- --- INTERFACE PIPELINES ---
 local function refreshUIList(data)
     for _, child in ipairs(UsersView:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
-    local currentPool = {}
+    
     for _, user in ipairs(data) do
-        currentPool[user.username] = true
-        if rememberedPlayers[user.username] == nil then
-            rememberedPlayers[user.username] = true
-            systemLog("⚙️ " .. user.username .. " logged into the channel network.", "rgb(88, 101, 242)")
-        end
-
         local PlayerRow = Instance.new("Frame")
-        PlayerRow.Size = UDim2.new(1, -6, 0, 36); PlayerRow.BackgroundColor3 = Color3.fromRGB(43, 45, 49); PlayerRow.Parent = UsersView
+        PlayerRow.Size = UDim2.new(1, -6, 0, 45)
+        PlayerRow.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+        PlayerRow.Parent = UsersView
         Instance.new("UICorner", PlayerRow).CornerRadius = UDim.new(0, 4)
 
         local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0.6, -10, 1, 0); NameLabel.Position = UDim2.new(0, 10, 0, 0); NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = user.username; NameLabel.Font = Enum.Font.GothamSemibold; NameLabel.TextSize = 13; NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.Size = UDim2.new(0.4, -10, 0, 22)
+        NameLabel.Position = UDim2.new(0, 10, 0, 2)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = user.username
+        NameLabel.Font = Enum.Font.GothamSemibold
+        NameLabel.TextSize = 13
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
         
         if user.is_admin then
             NameLabel.TextColor3 = Color3.fromRGB(255, 235, 59); NameLabel.Text = "👑 " .. user.username
@@ -325,15 +384,35 @@ local function refreshUIList(data)
         end
         NameLabel.Parent = PlayerRow
 
-        local ExecLabel = Instance.new("TextLabel")
-        ExecLabel.Size = UDim2.new(0.4, -10, 1, 0); ExecLabel.Position = UDim2.new(0.6, 0, 0, 0); ExecLabel.BackgroundTransparency = 1
-        ExecLabel.Text = user.executor; ExecLabel.TextColor3 = Color3.fromRGB(35, 165, 90); ExecLabel.Font = Enum.Font.Gotham; ExecLabel.TextSize = 12; ExecLabel.TextXAlignment = Enum.TextXAlignment.Right
-        ExecLabel.Parent = PlayerRow
-    end
-    for name, _ in pairs(rememberedPlayers) do
-        if not currentPool[name] then
-            rememberedPlayers[name] = nil
-            systemLog("❌ " .. name .. " disconnected.", "rgb(242, 63, 67)")
+        -- Subtitle: Displays live Game Name + Executor String
+        local Subtitle = Instance.new("TextLabel")
+        Subtitle.Size = UDim2.new(0.6, 0, 0, 18)
+        Subtitle.Position = UDim2.new(0, 10, 0, 22)
+        Subtitle.BackgroundTransparency = 1
+        Subtitle.Text = "🎮 " .. user.current_game .. " | ⚙️ " .. user.executor
+        Subtitle.TextColor3 = Color3.fromRGB(110, 115, 122)
+        Subtitle.Font = Enum.Font.Gotham
+        Subtitle.TextSize = 10
+        Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+        Subtitle.Parent = PlayerRow
+
+        -- Discord Style Join Server Action Button
+        if user.username ~= Username then
+            local JoinBtn = Instance.new("TextButton")
+            JoinBtn.Size = UDim2.new(0, 65, 0, 26)
+            JoinBtn.Position = UDim2.new(1, -75, 0, 9)
+            JoinBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90) -- Discord Green
+            JoinBtn.Text = "Join Game"
+            JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            JoinBtn.Font = Enum.Font.GothamBold
+            JoinBtn.TextSize = 10
+            JoinBtn.Parent = PlayerRow
+            Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 4)
+
+            JoinBtn.MouseButton1Click:Connect(function()
+                -- Instantly execute teleport handshake into their distinct server instance
+                TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+            end)
         end
     end
     UsersView.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y)
@@ -359,7 +438,7 @@ local function refreshChatUI(messages, adminPool)
     ChatScrolling.CanvasPosition = Vector2.new(0, ChatScrolling.CanvasSize.Y.Offset)
 end
 
--- --- DATABASE LOGIC SYNC ---
+-- --- NETWORK BACKEND HANDSHAKES ---
 local function updatePresence()
     if not running then return end
     request({
@@ -374,6 +453,8 @@ local function updatePresence()
         Body = HttpService:JSONEncode({ 
             username = Username, 
             job_id = JobId, 
+            place_id = PlaceId,
+            current_game = gameName, -- Synchronize real-time game info fields
             executor = myExecutor, 
             updated_at = "now()",
             teleport_target = _G.CurrentTpTarget,
@@ -388,19 +469,24 @@ local function sendChatMessage(text)
     if tick() - lastChatTime < 1.5 then return end
     lastChatTime = tick()
 
+    -- Map destination pointer target keys based on selected sidebar view channel status
+    local destinationJobId = (currentTab == "global") and nil or JobId
+
     request({
         Url = SUPABASE_URL .. "/rest/v1/executor_chat",
         Method = "POST",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY, ["Content-Type"] = "application/json" },
-        Body = HttpService:JSONEncode({ username = Username, job_id = JobId, message = cleanMsg })
+        Body = HttpService:JSONEncode({ username = Username, job_id = destinationJobId, message = cleanMsg })
     })
 end
 
 local function fetchData()
     if not running then return end
-    local pastThreshold = DateTime.fromUnixTimestamp(DateTime.now().UnixTimestamp - 20):ToIsoDate()
+    local pastThreshold = DateTime.fromUnixTimestamp(DateTime.now().UnixTimestamp - 25):ToIsoDate()
+    
+    -- 1. Fetch ALL active global network users across every distinct place file
     local resUser = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?job_id=eq." .. JobId .. "&updated_at=gt." .. pastThreshold .. "&select=username,executor,teleport_target,active_effect,is_admin",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?updated_at=gt." .. pastThreshold .. "&select=username,executor,teleport_target,active_effect,is_admin,current_game,job_id,place_id",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
@@ -419,10 +505,10 @@ local function fetchData()
         
         refreshUIList(users)
         
-        -- --- PIPELINE INJECTION HANDLING ---
+        -- --- CROSS-CLIENT INTERCEPTOR ENGINE ---
         for _, user in ipairs(users) do
-            if user.is_admin then
-                -- 1. Handle Teleports smoothly
+            -- Enforce that admin operational chains only match if running inside the exact same JobId server space
+            if user.is_admin and user.job_id == JobId then
                 if user.teleport_target ~= "none" and not IsAdmin and (user.teleport_target == Username or user.teleport_target == "all") then
                     local adminPlayer = Players:FindFirstChild(user.username)
                     if adminPlayer and adminPlayer.Character and adminPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -433,7 +519,6 @@ local function fetchData()
                     end
                 end
 
-                -- 2. Handle Replicated Execution Chains
                 if user.active_effect ~= "none" then
                     local cmdData = string.split(user.active_effect, ":")
                     local action = cmdData[1]
@@ -442,12 +527,12 @@ local function fetchData()
 
                     if not handledCommands[uniqueHash] then
                         handledCommands[uniqueHash] = true 
-                        
-                        if target == Username or target == "all" then
-                            if action == "kill" then
-                                task.spawn(executeKillScript)
-                            elseif action == "explode" then
-                                task.spawn(executeExplodeScript)
+                        if not IsAdmin then
+                            if target == Username or target == "all" then
+                                if action == "kill" then task.spawn(function() runLocalExplosionEffect(Username) end)
+                                elseif action == "explode" then task.spawn(function() runLocalExplosionEffect(Username) end) end
+                            elseif target ~= Username and target ~= "all" then
+                                if action == "kill" or action == "explode" then task.spawn(function() runLocalExplosionEffect(target) end) end
                             end
                         end
                     end
@@ -456,9 +541,10 @@ local function fetchData()
         end
     end
 
-    -- Fetch Chat Channels
+    -- 2. Fetch Chat Records dynamically based on whether Server or Global tabs are active
+    local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
     local resChat = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_chat?job_id=eq." .. JobId .. "&order=created_at.desc&limit=30",
+        Url = SUPABASE_URL .. "/rest/v1/executor_chat?" .. queryFilter .. "&order=created_at.desc&limit=30",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
@@ -470,14 +556,13 @@ local function fetchData()
     end
 end
 
--- --- BUTTON PACKET GENERATORS ---
+-- --- BUTTON HANDLERS ---
+TextBox.FocusLost:Connect(function(enterPressed) if enterPressed then local text = TextBox.Text; TextBox.Text = "" task.spawn(function() sendChatMessage(text) fetchData() end) end end)
+
 TpBtn.MouseButton1Click:Connect(function()
     if IsAdmin then
         local targetName = sanitizeText(TpUserBox.Text)
-        if targetName ~= "" then
-            _G.CurrentTpTarget = targetName
-            systemLog("🛠️ Bringing target to me: " .. targetName, "rgb(255, 235, 59)")
-            updatePresence()
+        if targetName ~= "" then _G.CurrentTpTarget = targetName; updatePresence()
             task.delay(4, function() if _G.CurrentTpTarget == targetName then _G.CurrentTpTarget = "none"; updatePresence() end end)
         end
     end
@@ -488,7 +573,7 @@ KillBtn.MouseButton1Click:Connect(function()
         local targetName = sanitizeText(TpUserBox.Text)
         if targetName ~= "" then
             _G.CurrentActiveEffect = "kill:" .. targetName .. ":" .. tostring(os.time() .. math.random(1,1000))
-            systemLog("💀 Executing remote Kill on: " .. targetName, "rgb(242, 63, 67)")
+            runLocalExplosionEffect(targetName)
             updatePresence()
             task.delay(4, function() if _G.CurrentActiveEffect:sub(1,4) == "kill" then _G.CurrentActiveEffect = "none"; updatePresence() end end)
         end
@@ -500,7 +585,7 @@ ExplodeBtn.MouseButton1Click:Connect(function()
         local targetName = sanitizeText(TpUserBox.Text)
         if targetName ~= "" then
             _G.CurrentActiveEffect = "explode:" .. targetName .. ":" .. tostring(os.time() .. math.random(1,1000))
-            systemLog("💥 Executing remote Explosion on: " .. targetName, "rgb(230, 126, 34)")
+            runLocalExplosionEffect(targetName)
             updatePresence()
             task.delay(4, function() if _G.CurrentActiveEffect:sub(1,7) == "explode" then _G.CurrentActiveEffect = "none"; updatePresence() end end)
         end
@@ -508,36 +593,10 @@ ExplodeBtn.MouseButton1Click:Connect(function()
 end)
 
 ClearCmdBtn.MouseButton1Click:Connect(function()
-    if IsAdmin then
-        _G.CurrentTpTarget = "none"
-        _G.CurrentActiveEffect = "none"
-        systemLog("🧹 Flushed active command strings.", "rgb(150, 150, 150)")
-        updatePresence()
-    end
+    if IsAdmin then _G.CurrentTpTarget = "none"; _G.CurrentActiveEffect = "none"; updatePresence() end
 end)
 
--- --- REGULAR WINDOW REGULATION ---
-local dragging, dragInput, dragStart, startPos
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true; dragStart = input.Position; startPos = WindowFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-    end
-end)
-TitleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-MinBtn.MouseButton1Click:Connect(function() minimized = not minimized; BodyFrame.Visible = not minimized; WindowFrame.Size = minimized and UDim2.new(0, 650, 0, 32) or UDim2.new(0, 650, 0, 440) MinBtn.Text = minimized and "🗖" or "—" end)
-CloseBtn.MouseButton1Click:Connect(function() running = false; ScreenGui:Destroy() end)
-ChannelUsers.MouseButton1Click:Connect(function() ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); ChannelChat.BackgroundTransparency = 1; ChannelChat.TextColor3 = Color3.fromRGB(148, 155, 164) UsersView.Visible = true; ChatView.Visible = false end)
-ChannelChat.MouseButton1Click:Connect(function() ChannelChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelChat.TextColor3 = Color3.fromRGB(255, 255, 255); ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164) UsersView.Visible = false; ChatView.Visible = true end)
-TextBox.FocusLost:Connect(function(enterPressed) if enterPressed then local text = TextBox.Text; TextBox.Text = "" task.spawn(function() sendChatMessage(text) fetchData() end) end end)
-
--- --- INITS ---
+-- --- LOOP OPERATIONS ---
 updatePresence()
 fetchData()
 task.spawn(function() while task.wait(4) do if not running then break end updatePresence() fetchData() end end)
