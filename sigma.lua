@@ -47,24 +47,21 @@ ScreenGui.ResetOnSpawn = false
 if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
 ScreenGui.Parent = CoreGui
 
--- Window Container
 local WindowFrame = Instance.new("Frame")
 WindowFrame.Size = UDim2.new(0, 650, 0, 400)
 WindowFrame.Position = UDim2.new(0.5, -325, 0.5, -200)
-WindowFrame.BackgroundColor3 = Color3.fromRGB(49, 51, 56) -- Discord Main BG
+WindowFrame.BackgroundColor3 = Color3.fromRGB(49, 51, 56) 
 WindowFrame.BorderSizePixel = 0
 WindowFrame.Active = true
 WindowFrame.Parent = ScreenGui
 Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 8)
 
--- Top Title Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 32)
-TitleBar.BackgroundColor3 = Color3.fromRGB(30, 31, 34) -- Discord Dark Top
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 31, 34) 
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = WindowFrame
-local TitleCorner = Instance.new("UICorner", TitleBar)
-TitleCorner.CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 8)
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -100, 1, 0)
@@ -77,7 +74,6 @@ TitleText.TextSize = 12
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TitleBar
 
--- Window Controls Frame
 local Controls = Instance.new("Frame")
 Controls.Size = UDim2.new(0, 70, 1, 0)
 Controls.Position = UDim2.new(1, -75, 0, 0)
@@ -86,7 +82,6 @@ Controls.Parent = TitleBar
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(0, 0, 0, 0)
 MinBtn.BackgroundTransparency = 1
 MinBtn.Text = "—"
 MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
@@ -104,21 +99,18 @@ CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
 CloseBtn.Parent = Controls
 
--- Main Body (Contains sidebar and channels)
 local BodyFrame = Instance.new("Frame")
 BodyFrame.Size = UDim2.new(1, 0, 1, -32)
 BodyFrame.Position = UDim2.new(0, 0, 0, 32)
 BodyFrame.BackgroundTransparency = 1
 BodyFrame.Parent = WindowFrame
 
--- Discord Left Sidebar
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 180, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(43, 45, 49) -- Discord Sidebar
+Sidebar.BackgroundColor3 = Color3.fromRGB(43, 45, 49) 
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = BodyFrame
 
--- Channel Switcher Tabs
 local ChannelUsers = Instance.new("TextButton")
 ChannelUsers.Size = UDim2.new(1, -16, 0, 32)
 ChannelUsers.Position = UDim2.new(0, 8, 0, 12)
@@ -143,14 +135,12 @@ ChannelChat.TextXAlignment = Enum.TextXAlignment.Left
 ChannelChat.Parent = Sidebar
 Instance.new("UICorner", ChannelChat).CornerRadius = UDim.new(0, 4)
 
--- Right-Side Viewport Frames
 local ViewContainer = Instance.new("Frame")
 ViewContainer.Size = UDim2.new(1, -180, 1, 0)
 ViewContainer.Position = UDim2.new(0, 180, 0, 0)
 ViewContainer.BackgroundTransparency = 1
 ViewContainer.Parent = BodyFrame
 
--- View: Users
 local UsersView = Instance.new("ScrollingFrame")
 UsersView.Size = UDim2.new(1, -20, 1, -20)
 UsersView.Position = UDim2.new(0, 10, 0, 10)
@@ -163,7 +153,6 @@ local UsersLayout = Instance.new("UIListLayout", UsersView)
 UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UsersLayout.Padding = UDim.new(0, 4)
 
--- View: Chat
 local ChatView = Instance.new("Frame")
 ChatView.Size = UDim2.new(1, -20, 1, -20)
 ChatView.Position = UDim2.new(0, 10, 0, 10)
@@ -184,7 +173,7 @@ ChatLayout.Padding = UDim.new(0, 6)
 local TextBox = Instance.new("TextBox")
 TextBox.Size = UDim2.new(1, 0, 0, 38)
 TextBox.Position = UDim2.new(0, 0, 1, -38)
-TextBox.BackgroundColor3 = Color3.fromRGB(56, 58, 64) -- Discord Box
+TextBox.BackgroundColor3 = Color3.fromRGB(56, 58, 64) 
 TextBox.TextColor3 = Color3.fromRGB(219, 222, 225)
 TextBox.PlaceholderText = "Message #global-chat"
 TextBox.PlaceholderColor3 = Color3.fromRGB(148, 155, 164)
@@ -196,7 +185,7 @@ TextBox.Parent = ChatView
 Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 12)
 Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
 
--- --- ADMIN DASHBOARD SUITE ---
+-- --- ADMIN CONTROL SUITE ---
 local AdminPanel = Instance.new("Frame")
 AdminPanel.Size = UDim2.new(1, -16, 0, 110)
 AdminPanel.Position = UDim2.new(0, 8, 1, -118)
@@ -208,7 +197,7 @@ Instance.new("UICorner", AdminPanel).CornerRadius = UDim.new(0, 6)
 local AdminTitle = Instance.new("TextLabel")
 AdminTitle.Size = UDim2.new(1, 0, 0, 24)
 AdminTitle.BackgroundTransparency = 1
-AdminTitle.Text = "👑 ADMIN PANEL"
+AdminTitle.Text = "👑 ADMIN CONTROL"
 AdminTitle.TextColor3 = Color3.fromRGB(255, 235, 59)
 AdminTitle.Font = Enum.Font.GothamBold
 AdminTitle.TextSize = 11
@@ -228,17 +217,15 @@ Instance.new("UICorner", TpUserBox).CornerRadius = UDim.new(0, 4)
 local TpBtn = Instance.new("TextButton")
 TpBtn.Size = UDim2.new(1, -16, 0, 32)
 TpBtn.Position = UDim2.new(0, 8, 0, 66)
-TpBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Discord Blurple
-TpBtn.Text = "Teleport Users"
+TpBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) 
+TpBtn.Text = "Bring To Me"
 TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 TpBtn.Font = Enum.Font.GothamBold
 TpBtn.TextSize = 12
 TpBtn.Parent = AdminPanel
 Instance.new("UICorner", TpBtn).CornerRadius = UDim.new(0, 4)
 
--- --- MECHANICS: Dragging, Minimize, Close ---
-
--- Discord-style smooth window dragging
+-- --- WINDOW HANDLERS (DRAG, MIN, CLOSE) ---
 local dragging, dragInput, dragStart, startPos
 TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -260,7 +247,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Minimize Logic
 local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
@@ -269,13 +255,11 @@ MinBtn.MouseButton1Click:Connect(function()
     MinBtn.Text = minimized and "🗖" or "—"
 end)
 
--- Close Logic
 CloseBtn.MouseButton1Click:Connect(function()
     running = false
     ScreenGui:Destroy()
 end)
 
--- Tab Controller
 ChannelUsers.MouseButton1Click:Connect(function()
     ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
     ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -294,7 +278,7 @@ ChannelChat.MouseButton1Click:Connect(function()
     ChatView.Visible = true
 end)
 
--- --- ENGINE PLUGINS ---
+-- --- PIPELINE ENGINES ---
 
 local function systemLog(text, colorStr)
     local MsgFrame = Instance.new("Frame")
@@ -306,7 +290,7 @@ local function systemLog(text, colorStr)
     MsgLabel.Size = UDim2.new(1, 0, 1, 0)
     MsgLabel.BackgroundTransparency = 1
     MsgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    MsgLabel.Font = Enum.Font.GothamBold -- Fix: Replaced GothamItalic with GothamBold
+    MsgLabel.Font = Enum.Font.GothamBold
     MsgLabel.TextSize = 12
     MsgLabel.RichText = true
     MsgLabel.Text = string.format("<font color='%s'>%s</font>", colorStr or "rgb(150, 150, 150)", text)
@@ -323,7 +307,7 @@ local function refreshUIList(data)
         currentPool[user.username] = true
         if rememberedPlayers[user.username] == nil then
             rememberedPlayers[user.username] = true
-            systemLog("⚙️ " .. user.username .. " jumped into the server network.", "rgb(88, 101, 242)")
+            systemLog("⚙️ " .. user.username .. " logged into the server channel.", "rgb(88, 101, 242)")
         end
 
         local PlayerRow = Instance.new("Frame")
@@ -357,7 +341,7 @@ local function refreshUIList(data)
         ExecLabel.Position = UDim2.new(0.6, 0, 0, 0)
         ExecLabel.BackgroundTransparency = 1
         ExecLabel.Text = user.executor
-        ExecLabel.TextColor3 = Color3.fromRGB(35, 165, 90) -- Discord Green
+        ExecLabel.TextColor3 = Color3.fromRGB(35, 165, 90) 
         ExecLabel.Font = Enum.Font.Gotham
         ExecLabel.TextSize = 12
         ExecLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -367,7 +351,7 @@ local function refreshUIList(data)
     for name, _ in pairs(rememberedPlayers) do
         if not currentPool[name] then
             rememberedPlayers[name] = nil
-            systemLog("❌ " .. name .. " left the network session.", "rgb(242, 63, 67)")
+            systemLog("❌ " .. name .. " logged out.", "rgb(242, 63, 67)")
         end
     end
     UsersView.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y)
@@ -402,15 +386,10 @@ local function refreshChatUI(messages, adminPool)
     ChatScrolling.CanvasPosition = Vector2.new(0, ChatScrolling.CanvasSize.Y.Offset)
 end
 
--- --- CLOUD INFRASTRUCTURE CONTROLLER ---
+-- --- DATABASE LOGIC NETWORK ---
 
 local function updatePresence()
     if not running then return end
-    local posStr = "none"
-    if IsAdmin and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local pos = LocalPlayer.Character.HumanoidRootPart.Position
-        posStr = string.format("%f,%f,%f", pos.X, pos.Y, pos.Z)
-    end
 
     request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync",
@@ -426,8 +405,7 @@ local function updatePresence()
             job_id = JobId, 
             executor = myExecutor, 
             updated_at = "now()",
-            teleport_target = _G.CurrentTpTarget, 
-            admin_position = posStr
+            teleport_target = _G.CurrentTpTarget -- Pushes text box target up to your profile
         })
     })
 end
@@ -454,7 +432,7 @@ local function fetchData()
     if not running then return end
     local pastThreshold = DateTime.fromUnixTimestamp(DateTime.now().UnixTimestamp - 20):ToIsoDate()
     local resUser = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?job_id=eq." .. JobId .. "&updated_at=gt." .. pastThreshold .. "&select=username,executor,teleport_target,admin_position,is_admin",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?job_id=eq." .. JobId .. "&updated_at=gt." .. pastThreshold .. "&select=username,executor,teleport_target,is_admin",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
@@ -473,16 +451,24 @@ local function fetchData()
         
         refreshUIList(users)
         
-        -- Execution check for active Teleport targets
+        -- --- CLIENT-SIDE EXECUTION ENGINE ---
+        -- If we aren't an admin, scan the active users to see if an authorized admin is requesting a Bring command
         if not IsAdmin then
             for _, user in ipairs(users) do
-                if user.is_admin and user.teleport_target ~= "none" and user.admin_position ~= "none" then
+                if user.is_admin and user.teleport_target ~= "none" then
                     if user.teleport_target == Username or user.teleport_target == "all" then
-                        local coords = string.split(user.admin_position, ",")
-                        local targetCFrame = CFrame.new(tonumber(coords[1]), tonumber(coords[2]) + 3, tonumber(coords[3]))
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            LocalPlayer.Character.HumanoidRootPart.CFrame = targetCFrame
+                        
+                        -- CRITICAL FIX: Find you ("HeavenlyReminiscence") in the engine space
+                        local adminPlayer = Players:FindFirstChild(user.username)
+                        if adminPlayer and adminPlayer.Character and adminPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local adminCF = adminPlayer.Character.HumanoidRootPart.CFrame
+                            
+                            -- Safety snap directly to your character space
+                            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                LocalPlayer.Character.HumanoidRootPart.CFrame = adminCF * CFrame.new(0, 2, -3)
+                            end
                         end
+                        
                     end
                 end
             end
@@ -519,9 +505,13 @@ TpBtn.MouseButton1Click:Connect(function()
         local targetName = sanitizeText(TpUserBox.Text)
         if targetName ~= "" then
             _G.CurrentTpTarget = targetName
-            systemLog("🛠️ Bringing target profile vector lines -> " .. targetName, "rgb(255, 235, 59)")
+            systemLog("🛠️ Issuing Bring Command to: " .. targetName, "rgb(255, 235, 59)")
+            
+            -- Push out configuration payload immediately
             updatePresence()
-            task.delay(6, function()
+            
+            -- Keep action pipeline open for 5 seconds to let users catch up, then reset smoothly
+            task.delay(5, function()
                 if _G.CurrentTpTarget == targetName then 
                     _G.CurrentTpTarget = "none" 
                     updatePresence()
@@ -531,7 +521,7 @@ TpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- --- Runtime Startup Synchronization Loops ---
+-- --- Runtime Loop Synchronization ---
 updatePresence()
 fetchData()
 
