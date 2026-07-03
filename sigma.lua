@@ -1,4 +1,4 @@
-local request = syn and syn.request or http_request or (http and http.request)
+local request = (http and http.request) or http_request or (syn and syn.request)
 if not request then
     warn("Your executor does not support HTTP requests.")
     return
@@ -39,11 +39,11 @@ end)
 local function getExecutor()
     if identifyexecutor then
         local name, version = identifyexecutor()
-        return name or "Unknown Exploit"
+        return name or "Potassium"
     elseif getexecutorname then
-        return getexecutorname() or "Unknown Exploit"
+        return getexecutorname() or "Potassium"
     end
-    return "Unknown/External"
+    return "Potassium"
 end
 local myExecutor = getExecutor()
 
@@ -78,7 +78,6 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DiscordNetworkHub"
 ScreenGui.ResetOnSpawn = false
-if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
 ScreenGui.Parent = CoreGui
 
 local WindowFrame = Instance.new("Frame")
@@ -339,13 +338,11 @@ local function systemLog(text, colorStr)
     MsgLabel.Parent = MsgFrame
 end
 
--- --- USER COMPILER (FIXED: Eliminates Stacking Duplicates) ---
 local function refreshUIList(data)
     for _, child in ipairs(UsersView:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
     
     local uniquePool = {}
     for _, user in ipairs(data) do
-        -- Anti-stack filter layer
         if not uniquePool[user.username] then
             uniquePool[user.username] = true
 
@@ -425,7 +422,7 @@ local function refreshChatUI(messages, adminPool)
     ChatScrolling.CanvasPosition = Vector2.new(0, ChatScrolling.CanvasSize.Y.Offset)
 end
 
--- --- CLOUD INFRASTRUCTURE CONTROLLER ---
+-- --- DATABASE LOGIC SYNC ---
 local function updatePresence()
     if not running then return end
     request({
@@ -456,8 +453,6 @@ local function sendChatMessage(text)
     if tick() - lastChatTime < 1.5 then return end
     lastChatTime = tick()
 
-    -- FIX: Forces global tab messages to explicitly post via null fields to activate cross-game replication
-    local targetField = (currentTab == "global") and "job_id" or "job_id"
     local targetPayload = { username = Username, message = cleanMsg }
     if currentTab == "server" then targetPayload.job_id = JobId end
 
@@ -493,7 +488,6 @@ local function fetchData()
         
         refreshUIList(users)
         
-        -- --- ADMIN CONTROL ENGINE LAYER (FIXED: Targets JobId strictly for commands) ---
         for _, user in ipairs(users) do
             if user.is_admin and user.job_id == JobId then
                 if user.teleport_target ~= "none" and not IsAdmin and (user.teleport_target == Username or user.teleport_target == "all") then
@@ -515,7 +509,6 @@ local function fetchData()
                     if not handledCommands[uniqueHash] then
                         handledCommands[uniqueHash] = true 
                         
-                        -- FIX: Decouple specific environment checks so loops intercept and execute code properly
                         if action == "kill" or action == "explode" then
                             if target == Username or target == "all" then
                                 runLocalExplosionEffect(Username)
@@ -529,7 +522,6 @@ local function fetchData()
         end
     end
 
-    -- --- CHAT REPLICATOR QUERY PLUG (FIXED: Handles accurate cross-game mapping) ---
     local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
     local resChat = request({
         Url = SUPABASE_URL .. "/rest/v1/executor_chat?" .. queryFilter .. "&order=created_at.desc&limit=30",
@@ -544,7 +536,7 @@ local function fetchData()
     end
 end
 
--- --- CORE SYSTEM INPUT TRIGGERS ---
+-- --- BUTTON HANDLERS ---
 TextBox.FocusLost:Connect(function(enterPressed) if enterPressed then local text = TextBox.Text; TextBox.Text = "" task.spawn(function() sendChatMessage(text) fetchData() end) end end)
 
 TpBtn.MouseButton1Click:Connect(function()
@@ -569,12 +561,26 @@ KillBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-var dragging, dragInput, dragStart, startPos
+ExplodeBtn.MouseButton1Click:Connect(function() 
+    if IsAdmin then 
+        local targetName = sanitizeText(TpUserBox.Text) 
+        if targetName ~= "" then 
+            local hash = tostring(os.time() .. math.random(1,1000)) 
+            _G.CurrentActiveEffect = "explode:" .. targetName .. ":" .. hash 
+            runLocalExplosionEffect(targetName) 
+            updatePresence() 
+            task.delay(4, function() if _G.CurrentActiveEffect:sub(1,7) == "explode" then _G.CurrentActiveEffect = "none"; updatePresence() end end) 
+        end 
+    end 
+end)
+
+ClearCmdBtn.MouseButton1Click:Connect(function() if IsAdmin then _G.CurrentTpTarget = "none"; _G.CurrentActiveEffect = "none"; updatePresence() end end)
+
+-- --- REGULAR WINDOW DRAGGING & CONTROLS ---
+local dragging, dragInput, dragStart, startPos
 TitleBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = WindowFrame.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
 TitleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
-ExplodeBtn.MouseButton1Click:Connect(function() if IsAdmin then local targetName = sanitizeText(TpUserBox.Text) if targetName ~= "" then local hash = tostring(os.time() .. math.random(1,1000)) _G.CurrentActiveEffect = "explode:" .. targetName .. ":" .. hash runLocalExplosionEffect(targetName) updatePresence() task.delay(4, function() if _G.CurrentActiveEffect:sub(1,7) == "explode" then _G.CurrentActiveEffect = "none"; updatePresence() end end) end end end)
-ClearCmdBtn.MouseButton1Click:Connect(function() if IsAdmin then _G.CurrentTpTarget = "none"; _G.CurrentActiveEffect = "none"; updatePresence() end end)
 MinBtn.MouseButton1Click:Connect(function() minimized = not minimized; BodyFrame.Visible = not minimized; WindowFrame.Size = minimized and UDim2.new(0, 650, 0, 32) or UDim2.new(0, 680, 0, 440) MinBtn.Text = minimized and "🗖" or "—" end)
 CloseBtn.MouseButton1Click:Connect(function() running = false; ScreenGui:Destroy() end)
 
