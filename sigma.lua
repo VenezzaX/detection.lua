@@ -12,7 +12,6 @@ local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
--- !!! YOUR SUPABASE CREDENTIALS CONFIGURATION !!!
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
@@ -53,7 +52,6 @@ local function sanitizeText(text)
     return clean
 end
 
--- --- NATIVE VISUAL SPECIAL EFFECTS ---
 local function runLocalExplosionEffect(targetName)
     local targetPlayer = Players:FindFirstChild(targetName)
     if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -74,7 +72,6 @@ local function runLocalExplosionEffect(targetName)
     end
 end
 
--- --- DISCORD MASTER UI SYSTEM ---
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DiscordNetworkHub"
 ScreenGui.ResetOnSpawn = false
@@ -299,7 +296,6 @@ ClearCmdBtn.TextSize = 11
 ClearCmdBtn.Parent = AdminPanel
 Instance.new("UICorner", ClearCmdBtn).CornerRadius = UDim.new(0, 4)
 
--- --- UTILS & ACTION BAR LISTENERS ---
 local function selectTab(tab)
     currentTab = tab
     ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164)
@@ -422,7 +418,6 @@ local function refreshChatUI(messages, adminPool)
     ChatScrolling.CanvasPosition = Vector2.new(0, ChatScrolling.CanvasSize.Y.Offset)
 end
 
--- --- DATABASE LOGIC SYNC ---
 local function updatePresence()
     if not running then return end
     request({
@@ -536,7 +531,6 @@ local function fetchData()
     end
 end
 
--- --- BUTTON HANDLERS ---
 TextBox.FocusLost:Connect(function(enterPressed) if enterPressed then local text = TextBox.Text; TextBox.Text = "" task.spawn(function() sendChatMessage(text) fetchData() end) end end)
 
 TpBtn.MouseButton1Click:Connect(function()
@@ -576,7 +570,6 @@ end)
 
 ClearCmdBtn.MouseButton1Click:Connect(function() if IsAdmin then _G.CurrentTpTarget = "none"; _G.CurrentActiveEffect = "none"; updatePresence() end end)
 
--- --- REGULAR WINDOW DRAGGING & CONTROLS ---
 local dragging, dragInput, dragStart, startPos
 TitleBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = WindowFrame.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
 TitleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
@@ -584,7 +577,6 @@ UserInputService.InputChanged:Connect(function(input) if input == dragInput and 
 MinBtn.MouseButton1Click:Connect(function() minimized = not minimized; BodyFrame.Visible = not minimized; WindowFrame.Size = minimized and UDim2.new(0, 650, 0, 32) or UDim2.new(0, 680, 0, 440) MinBtn.Text = minimized and "🗖" or "—" end)
 CloseBtn.MouseButton1Click:Connect(function() running = false; ScreenGui:Destroy() end)
 
--- --- EXECUTION TIMERS ---
 updatePresence()
 fetchData()
 task.spawn(function() while task.wait(4) do if not running then break end updatePresence() fetchData() end end)
