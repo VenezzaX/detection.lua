@@ -168,8 +168,12 @@ local ActiveTargetTitle = Instance.new("TextLabel")
 ActiveTargetTitle.Size = UDim2.new(1, 0, 0, 25); ActiveTargetTitle.Position = UDim2.new(0, 10, 0, 5); ActiveTargetTitle.BackgroundTransparency = 1; ActiveTargetTitle.Text = "Selected Target: none"; ActiveTargetTitle.TextColor3 = Color3.fromRGB(255, 255, 255); ActiveTargetTitle.Font = Enum.Font.GothamBold; ActiveTargetTitle.TextSize = 13; ActiveTargetTitle.TextXAlignment = Enum.TextXAlignment.Left; ActiveTargetTitle.Parent = TopActionFrame
 
 local BringBtn = Instance.new("TextButton")
-BringBtn.Size = UDim2.new(1, -20, 0, 28); BringBtn.Position = UDim2.new(0, 10, 0, 35); BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); BringBtn.Text = "Bring User To Me"; BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255); BringBtn.Font = Enum.Font.GothamBold; BringBtn.TextSize = 11; BringBtn.Parent = TopActionFrame
+BringBtn.Size = UDim2.new(0, 115, 0, 28); BringBtn.Position = UDim2.new(0, 10, 0, 35); BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); BringBtn.Text = "Bring User (Server)"; BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255); BringBtn.Font = Enum.Font.GothamBold; BringBtn.TextSize = 10; BringBtn.Parent = TopActionFrame
 Instance.new("UICorner", BringBtn).CornerRadius = UDim.new(0, 4)
+
+local TeleportToMeBtn = Instance.new("TextButton")
+TeleportToMeBtn.Size = UDim2.new(1, -145, 0, 28); TeleportToMeBtn.Position = UDim2.new(0, 135, 0, 35); TeleportToMeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90); TeleportToMeBtn.Text = "Teleport User to Me"; TeleportToMeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TeleportToMeBtn.Font = Enum.Font.GothamBold; TeleportToMeBtn.TextSize = 10; TeleportToMeBtn.Parent = TopActionFrame
+Instance.new("UICorner", TeleportToMeBtn).CornerRadius = UDim.new(0, 4)
 
 local RemoteKillBtn = Instance.new("TextButton")
 RemoteKillBtn.Size = UDim2.new(0, 115, 0, 28); RemoteKillBtn.Position = UDim2.new(0, 10, 0, 70); RemoteKillBtn.BackgroundColor3 = Color3.fromRGB(242, 63, 67); RemoteKillBtn.Text = "Remote Kill"; RemoteKillBtn.TextColor3 = Color3.fromRGB(255, 255, 255); RemoteKillBtn.Font = Enum.Font.GothamBold; RemoteKillBtn.TextSize = 11; RemoteKillBtn.Parent = TopActionFrame
@@ -443,6 +447,35 @@ BringBtn.MouseButton1Click:Connect(function()
         _G.CurrentTpTarget = SelectedTarget; updatePresence()
         systemLog("Suite: Teleport signal locked on -> " .. SelectedTarget, "rgb(255, 235, 59)")
         task.delay(3, function() if _G.CurrentTpTarget == SelectedTarget then _G.CurrentTpTarget = "none"; updatePresence() end end)
+    end
+end)
+
+TeleportToMeBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and SelectedTarget ~= "none" then
+        local hash = tostring(os.time() .. math.random(1,1000))
+        local code = string.format([[
+            local admin = game.Players:FindFirstChild("%s")
+            if admin and admin.Character and admin.Character:FindFirstChild("HumanoidRootPart") then
+                local myChar = game.Players.LocalPlayer.Character
+                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+                if myHrp then
+                    if myHum then myHum.Sit = false end
+                    myHrp.CFrame = admin.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                    myHrp.AssemblyLinearVelocity = Vector3.zero
+                end
+            end
+        ]], Username)
+        local payloadClean = HttpService:UrlEncode(code)
+        _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
+        updatePresence()
+        systemLog("Suite: Teleport-to-me command sent -> " .. SelectedTarget, "rgb(35, 165, 90)")
+        task.delay(4, function()
+            if _G.CurrentActiveEffect:sub(1,7) == "runcode" then
+                _G.CurrentActiveEffect = "none"
+                updatePresence()
+            end
+        end)
     end
 end)
 
