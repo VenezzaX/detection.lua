@@ -41,12 +41,20 @@ local function getExecutor()
 end
 local myExecutor = getExecutor()
 
+-- Safely converts incoming JSON data to avoid null userdata crashes
+local function safeString(val, fallback)
+    if type(val) == "string" and val ~= "" then return val end
+    if type(val) == "number" then return tostring(val) end
+    return fallback
+end
+
 local function sanitizeText(text)
-    local clean = string.gsub(text, "<[^>]*>", "")
+    local clean = string.gsub(safeString(text, ""), "<[^>]*>", "")
     return #clean > 1000 and string.sub(clean, 1, 1000) or clean
 end
 
 local function truncate(str, limit)
+    str = safeString(str, "")
     limit = limit or 18
     return #str > limit and string.sub(str, 1, limit - 3) .. "..." or str
 end
@@ -69,6 +77,7 @@ local function runExplosionEffect(targetName)
     end
 end
 
+-- UI SETUP
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SyncNetworkCore"
 ScreenGui.ResetOnSpawn = false
@@ -328,6 +337,7 @@ TabUsers.MouseButton1Click:Connect(function() setTab("users") end)
 TabGlobal.MouseButton1Click:Connect(function() setTab("global") end)
 TabPanel.MouseButton1Click:Connect(function() setTab("panel") end)
 
+-- GRID POPULATION WITH SAFETY CHECKS
 local function populateUserGrid(data)
     for _, child in ipairs(UsersFrame:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
@@ -338,7 +348,7 @@ local function populateUserGrid(data)
 
     local unique = {}
     for _, user in ipairs(data) do
-        local uName = tostring(user.username or "Unknown")
+        local uName = safeString(user.username, "Unknown")
         if not unique[uName] then
             unique[uName] = true
 
@@ -371,11 +381,14 @@ local function populateUserGrid(data)
             NameText.TextColor3 = Color3.fromRGB(230, 232, 240)
             NameText.Parent = Item
 
+            local safeGame = safeString(user.current_game, "Roblox Experience")
+            local safeExec = safeString(user.executor, "Exec")
+
             local InfoText = Instance.new("TextLabel")
             InfoText.Size = UDim2.new(0.65, 0, 0, 14)
             InfoText.Position = UDim2.new(0, 10, 0, 21)
             InfoText.BackgroundTransparency = 1
-            InfoText.Text = truncate(user.current_game or "Roblox Experience", 16) .. "  •  " .. truncate(user.executor or "Exec", 10)
+            InfoText.Text = truncate(safeGame, 16) .. "  •  " .. truncate(safeExec, 10)
             InfoText.Font = Enum.Font.Gotham
             InfoText.TextSize = 9
             InfoText.TextColor3 = Color3.fromRGB(110, 115, 130)
@@ -443,16 +456,19 @@ local function populateChat(records, adminGroup)
         Content.TextSize = 11
         Content.RichText = true
         
-        local tagColor = adminGroup[msg.username] and "rgb(255, 215, 0)" or "rgb(160, 165, 180)"
-        Content.Text = string.format("<font color='%s'>%s</font>: %s", tagColor, truncate(msg.username or "Unknown", 14), sanitizeText(msg.message or ""))
+        local safeName = safeString(msg.username, "Unknown")
+        local tagColor = adminGroup[safeName] and "rgb(255, 215, 0)" or "rgb(160, 165, 180)"
+        Content.Text = string.format("<font color='%s'>%s</font>: %s", tagColor, truncate(safeName, 14), sanitizeText(msg.message))
         Content.TextColor3 = Color3.fromRGB(215, 218, 225)
         Content.Parent = Container
     end
 end
 
+-- DATABASE BACKEND 
 local function updatePresence()
     if not running then return end
-    request({
+    
+    local res = request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync?on_conflict=username",
         Method = "POST",
         Headers = {
@@ -468,9 +484,15 @@ local function updatePresence()
             place_id = PlaceId,
             current_game = gameName,
             executor = myExecutor,
-            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            teleport_target = "none",
+            active_effect = "none"
         })
     })
+
+    if res and res.StatusCode > 299 then
+        warn("[Network] Sync POST error: HTTP", res.StatusCode, res.Body)
+    end
 end
 
 local function dispatchCommand(actionType, targetUser)
@@ -510,74 +532,87 @@ end
 local function fetchNetworkData()
     if not running then return end
     
+    -- Added &nocache= to prevent exploit executors from returning a stale, cached GET response
     local syncRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50&nocache=" .. tostring(tick()),
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
 
     local adminGroup = {}
-    if syncRes and syncRes.StatusCode == 200 then
-        local userlist = HttpService:JSONDecode(syncRes.Body)
-        for _, u in ipairs(userlist) do
-            if u.is_admin == true or u.is_sub_admin == true then
-                adminGroup[u.username] = true
+    if not syncRes then
+        warn("[Network] Sync GET request dropped.")
+    elseif syncRes.StatusCode ~= 200 then
+        warn("[Network] Sync GET error: HTTP", syncRes.StatusCode, syncRes.Body)
+    else
+        local success, userlist = pcall(function() return HttpService:JSONDecode(syncRes.Body) end)
+        if success and type(userlist) == "table" then
+            for _, u in ipairs(userlist) do
+                if u.is_admin == true or u.is_sub_admin == true then
+                    adminGroup[safeString(u.username, "Unknown")] = true
+                end
+                if u.user_id == UserId or safeString(u.username, "") == Username then
+                    IsAdmin = (u.is_admin == true)
+                    IsSubAdmin = (u.is_sub_admin == true)
+                    TabPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
+                end
             end
-            if u.user_id == UserId or u.username == Username then
-                IsAdmin = (u.is_admin == true)
-                IsSubAdmin = (u.is_sub_admin == true)
-                TabPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
-            end
+            populateUserGrid(userlist)
+        else
+            warn("[Network] Failed to parse sync JSON array.")
         end
-        populateUserGrid(userlist)
     end
 
     local cmdRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/remote_commands?target_username=in.(" .. Username .. ",all)&order=created_at.desc&limit=8",
+        Url = SUPABASE_URL .. "/rest/v1/remote_commands?target_username=in.(" .. Username .. ",all)&order=created_at.desc&limit=8&nocache=" .. tostring(tick()),
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
 
     if cmdRes and cmdRes.StatusCode == 200 then
-        local cmds = HttpService:JSONDecode(cmdRes.Body)
-        for _, c in ipairs(cmds) do
-            if not handledCommands[c.id] then
-                handledCommands[c.id] = true
-                if c.action == "kill" or c.action == "explode" then
-                    runExplosionEffect(Username)
-                elseif c.action == "teleport_to" then
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p.UserId == c.sender_user_id and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local myChar = LocalPlayer.Character
-                            if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                                myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+        pcall(function()
+            local cmds = HttpService:JSONDecode(cmdRes.Body)
+            for _, c in ipairs(cmds) do
+                if not handledCommands[c.id] then
+                    handledCommands[c.id] = true
+                    if c.action == "kill" or c.action == "explode" then
+                        runExplosionEffect(Username)
+                    elseif c.action == "teleport_to" then
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p.UserId == c.sender_user_id and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                local myChar = LocalPlayer.Character
+                                if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                                    myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                                end
+                                break
                             end
-                            break
                         end
-                    end
-                elseif c.action == "bring" then
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p.UserId == c.sender_user_id then
-                            TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-                            break
+                    elseif c.action == "bring" then
+                        for _, p in ipairs(Players:GetPlayers()) do
+                            if p.UserId == c.sender_user_id then
+                                TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
+                                break
+                            end
                         end
                     end
                 end
             end
-        end
+        end)
     end
 
     local chatRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_chat?order=created_at.desc&limit=25",
+        Url = SUPABASE_URL .. "/rest/v1/executor_chat?order=created_at.desc&limit=25&nocache=" .. tostring(tick()),
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
     
     if chatRes and chatRes.StatusCode == 200 then
-        local logs = HttpService:JSONDecode(chatRes.Body)
-        local ordered = {}
-        for i = #logs, 1, -1 do table.insert(ordered, logs[i]) end
-        populateChat(ordered, adminGroup)
+        pcall(function()
+            local logs = HttpService:JSONDecode(chatRes.Body)
+            local ordered = {}
+            for i = #logs, 1, -1 do table.insert(ordered, logs[i]) end
+            populateChat(ordered, adminGroup)
+        end)
     end
 end
 
