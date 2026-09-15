@@ -12,11 +12,9 @@ local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
--- SUPABASE CONFIGURATION
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
--- LOCAL FILE KEY LOADING
 local KEY_FILENAME = "admin_key.txt"
 local function loadLocalAdminKey()
     if isfile and readfile and isfile(KEY_FILENAME) then
@@ -35,7 +33,6 @@ local IsAdmin = false
 local IsSubAdmin = false
 local SelectedTarget = "none" 
 
-local rememberedPlayers = {}
 local handledCommands = {} 
 local lastChatTime = 0
 local lastTeleportTime = 0 
@@ -88,7 +85,7 @@ local function runLocalExplosionEffect(targetName)
     end
 end
 
--- --- UI SETUP ---
+-- UI SETUP
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DiscordNetworkHub"
 ScreenGui.ResetOnSpawn = false
@@ -308,10 +305,10 @@ local function refreshChatUI(messages, adminPool)
     end
 end
 
--- --- NETWORK BACKEND ---
+-- DATABASE OPERATIONS
 local function updatePresence()
     if not running then return end
-    request({
+    local res = request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync?on_conflict=username",
         Method = "POST",
         Headers = { 
@@ -332,6 +329,9 @@ local function updatePresence()
             active_effect = _G.CurrentActiveEffect 
         })
     })
+    if res and res.StatusCode > 299 then
+        warn("[Sync POST Failed]: HTTP", res.StatusCode, res.Body)
+    end
 end
 
 local function sendChatMessage(text)
@@ -354,6 +354,7 @@ end
 local function fetchData()
     if not running then return end
     
+    -- Removed restrictive time filter to prevent clock drift from dropping rows
     local resUser = request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50",
         Method = "GET",
@@ -374,49 +375,12 @@ local function fetchData()
                     ChannelExecPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
                 end
             end
-            
             refreshUIList(users)
-            
-            -- SAFE ROLE-BASED INTERCEPTOR
-            for _, user in ipairs(users) do
-                if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
-                    if tick() - lastTeleportTime > 5 then 
-                        if user.is_admin == true or user.is_sub_admin == true then
-                            lastTeleportTime = tick() 
-                            TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
-                        end
-                    end
-                end
-
-                if user.active_effect and user.active_effect ~= "none" then
-                    local cmdData = string.split(user.active_effect, ":")
-                    local action = cmdData[1]
-                    local target = cmdData[2]
-                    local uniqueHash = cmdData[3] 
-
-                    if uniqueHash and not handledCommands[uniqueHash] then
-                        if user.is_admin == true or user.is_sub_admin == true then
-                            handledCommands[uniqueHash] = true 
-                            if action == "kill" or action == "explode" then
-                                if target == Username or target == "all" then 
-                                    runLocalExplosionEffect(Username)
-                                end
-                            elseif action == "teleport_to" and target == Username then
-                                for _, p in ipairs(Players:GetPlayers()) do
-                                    if p.Name == user.username and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                                        local myChar = LocalPlayer.Character
-                                        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                                            myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                                        end
-                                        break
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
+        else
+            warn("[Sync Decode Failed]:", tostring(users))
         end
+    else
+        warn("[Sync GET Failed]: HTTP", resUser and resUser.StatusCode, resUser and resUser.Body)
     end
 
     local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
@@ -536,7 +500,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     pcall(function() ScreenGui:Destroy() end) 
 end)
 
--- --- INITIALIZATION ---
+-- INITIALIZATION
 updatePresence()
 fetchData()
 task.spawn(function() 
