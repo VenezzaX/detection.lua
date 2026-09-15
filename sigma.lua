@@ -1,5 +1,8 @@
 local request = (http and http.request) or http_request or (syn and (syn.request or syn.request))
-if not request then return end
+if not request then
+    warn("Your executor does not support HTTP requests.")
+    return
+end
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -9,9 +12,11 @@ local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local LocalPlayer = Players.LocalPlayer
 
+-- SUPABASE CONFIGURATION
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
+-- LOCAL FILE KEY LOADING
 local KEY_FILENAME = "admin_key.txt"
 local function loadLocalAdminKey()
     if isfile and readfile and isfile(KEY_FILENAME) then
@@ -20,657 +25,524 @@ local function loadLocalAdminKey()
     end
     return ""
 end
-
 local ADMIN_KEY = loadLocalAdminKey()
-local JobId, PlaceId = game.JobId, game.PlaceId
-local Username, UserId = LocalPlayer.Name, LocalPlayer.UserId
 
-local IsAdmin, IsSubAdmin = false, false
-local SelectedTarget = "none"
-local handledCommands, running = {}, true
-local currentTab = "users"
+local JobId = game.JobId
+local PlaceId = game.PlaceId
+local Username = LocalPlayer.Name
+local UserId = LocalPlayer.UserId
+local IsAdmin = false 
+local IsSubAdmin = false
+local SelectedTarget = "none" 
 
-local gameName = "Roblox Experience"
+local rememberedPlayers = {}
+local handledCommands = {} 
+local lastChatTime = 0
+local lastTeleportTime = 0 
+local running = true
+local currentTab = "users" 
+
+_G.CurrentTpTarget = "none"
+_G.CurrentActiveEffect = "none"
+
+local gameName = "Roblox Game"
 pcall(function()
-    gameName = MarketplaceService:GetProductInfo(PlaceId).Name
+    local info = MarketplaceService:GetProductInfo(PlaceId)
+    gameName = info.Name
 end)
 
 local function getExecutor()
-    if identifyexecutor then return identifyexecutor() or "Unknown" end
-    return "Unknown"
+    if identifyexecutor then local name = identifyexecutor() return name or "Potassium" end
+    return "Potassium"
 end
 local myExecutor = getExecutor()
 
--- Safely converts incoming JSON data to avoid null userdata crashes
-local function safeString(val, fallback)
-    if type(val) == "string" and val ~= "" then return val end
-    if type(val) == "number" then return tostring(val) end
-    return fallback
+local function cleanUrlDecode(str)
+    str = string.gsub(str, "+", " ")
+    str = string.gsub(str, "%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end)
+    return str
 end
 
 local function sanitizeText(text)
-    local clean = string.gsub(safeString(text, ""), "<[^>]*>", "")
-    return #clean > 1000 and string.sub(clean, 1, 1000) or clean
+    local clean = string.gsub(tostring(text or ""), "<[^>]*>", "")
+    if #clean > 1000 then clean = string.sub(clean, 1, 1000) end
+    return clean
 end
 
-local function truncate(str, limit)
-    str = safeString(str, "")
-    limit = limit or 18
-    return #str > limit and string.sub(str, 1, limit - 3) .. "..." or str
-end
-
-local function runExplosionEffect(targetName)
+local function runLocalExplosionEffect(targetName)
     local targetPlayer = Players:FindFirstChild(targetName)
     if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local char = targetPlayer.Character
         local exp = Instance.new("Explosion")
         exp.Position = char.HumanoidRootPart.Position
-        exp.BlastRadius, exp.BlastPressure = 0, 0
-        exp.Parent = workspace
+        exp.BlastRadius = 0; exp.BlastPressure = 0; exp.Parent = workspace
         if char:FindFirstChild("Humanoid") then char.Humanoid.Health = 0 end
         char:BreakJoints()
         for _, part in ipairs(char:GetChildren()) do
             if part:IsA("BasePart") then
-                part.Velocity = Vector3.new(math.random(-80, 80), math.random(60, 120), math.random(-80, 80))
+                part.Velocity = Vector3.new(math.random(-100, 100), math.random(80, 150), math.random(-100, 100))
             end
         end
     end
 end
 
--- UI SETUP
+-- --- UI SETUP ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SyncNetworkCore"
+ScreenGui.Name = "DiscordNetworkHub"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 
-local Root = Instance.new("Frame")
-Root.Size = UDim2.new(0, 620, 0, 390)
-Root.Position = UDim2.new(0.5, -310, 0.5, -195)
-Root.BackgroundColor3 = Color3.fromRGB(18, 19, 23)
-Root.BorderSizePixel = 0
-Root.Active = true
-Root.Parent = ScreenGui
-Instance.new("UICorner", Root).CornerRadius = UDim.new(0, 10)
+local WindowFrame = Instance.new("Frame")
+WindowFrame.Size = UDim2.new(0, 680, 0, 440)
+WindowFrame.Position = UDim2.new(0.5, -340, 0.5, -220)
+WindowFrame.BackgroundColor3 = Color3.fromRGB(49, 51, 56); WindowFrame.BorderSizePixel = 0
+WindowFrame.Active = true; WindowFrame.Parent = ScreenGui
+Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 8)
 
-local RootStroke = Instance.new("UIStroke", Root)
-RootStroke.Color = Color3.fromRGB(35, 38, 47)
-RootStroke.Thickness = 1
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 32); TitleBar.BackgroundColor3 = Color3.fromRGB(30, 31, 34); TitleBar.Parent = WindowFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 8)
 
-local Topbar = Instance.new("Frame")
-Topbar.Size = UDim2.new(1, 0, 0, 36)
-Topbar.BackgroundColor3 = Color3.fromRGB(24, 25, 31)
-Topbar.BorderSizePixel = 0
-Topbar.Parent = Root
-Instance.new("UICorner", Topbar).CornerRadius = UDim.new(0, 10)
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -100, 1, 0); TitleText.Position = UDim2.new(0, 12, 0, 0); TitleText.BackgroundTransparency = 1
+TitleText.Text = "Discord Sync Hub — Cross-Game Network"; TitleText.TextColor3 = Color3.fromRGB(242, 243, 245)
+TitleText.Font = Enum.Font.GothamBold; TitleText.TextSize = 12; TitleText.TextXAlignment = Enum.TextXAlignment.Left; TitleText.Parent = TitleBar
 
-local HeaderTitle = Instance.new("TextLabel")
-HeaderTitle.Size = UDim2.new(0, 200, 1, 0)
-HeaderTitle.Position = UDim2.new(0, 14, 0, 0)
-HeaderTitle.BackgroundTransparency = 1
-HeaderTitle.Text = "NETWORK // HUB"
-HeaderTitle.TextColor3 = Color3.fromRGB(230, 232, 240)
-HeaderTitle.Font = Enum.Font.GothamBold
-HeaderTitle.TextSize = 12
-HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
-HeaderTitle.Parent = Topbar
-
-local WindowActions = Instance.new("Frame")
-WindowActions.Size = UDim2.new(0, 50, 1, 0)
-WindowActions.Position = UDim2.new(1, -54, 0, 0)
-WindowActions.BackgroundTransparency = 1
-WindowActions.Parent = Topbar
+local Controls = Instance.new("Frame")
+Controls.Size = UDim2.new(0, 70, 1, 0); Controls.Position = UDim2.new(1, -75, 0, 0); Controls.BackgroundTransparency = 1; Controls.Parent = TitleBar
 
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 20, 0, 20)
-MinBtn.Position = UDim2.new(0, 0, 0.5, -10)
-MinBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 42)
-MinBtn.Text = "-"
-MinBtn.TextColor3 = Color3.fromRGB(160, 165, 180)
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 12
-MinBtn.Parent = WindowActions
-Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+MinBtn.Size = UDim2.new(0, 30, 0, 30); MinBtn.BackgroundTransparency = 1; MinBtn.Text = "—"; MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193); MinBtn.Font = Enum.Font.GothamBold; MinBtn.TextSize = 14; MinBtn.Parent = Controls
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(0, 24, 0.5, -10)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 42)
-CloseBtn.Text = "x"
-CloseBtn.TextColor3 = Color3.fromRGB(160, 165, 180)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 11
-CloseBtn.Parent = WindowActions
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(0, 35, 0, 0); CloseBtn.BackgroundTransparency = 1; CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193); CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextSize = 14; CloseBtn.Parent = Controls
 
-local MainArea = Instance.new("Frame")
-MainArea.Size = UDim2.new(1, 0, 1, -36)
-MainArea.Position = UDim2.new(0, 0, 0, 36)
-MainArea.BackgroundTransparency = 1
-MainArea.Parent = Root
+local BodyFrame = Instance.new("Frame")
+BodyFrame.Size = UDim2.new(1, 0, 1, -32); BodyFrame.Position = UDim2.new(0, 0, 0, 32); BodyFrame.BackgroundTransparency = 1; BodyFrame.Parent = WindowFrame
 
-local Navigation = Instance.new("Frame")
-Navigation.Size = UDim2.new(0, 140, 1, 0)
-Navigation.BackgroundColor3 = Color3.fromRGB(22, 23, 28)
-Navigation.BorderSizePixel = 0
-Navigation.Parent = MainArea
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 190, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(43, 45, 49); Sidebar.Parent = BodyFrame
 
-local NavLayout = Instance.new("UIListLayout", Navigation)
-NavLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NavLayout.Padding = UDim.new(0, 4)
-local NavPadding = Instance.new("UIPadding", Navigation)
-NavPadding.PaddingTop = UDim.new(0, 8)
-NavPadding.PaddingLeft = UDim.new(0, 8)
-NavPadding.PaddingRight = UDim.new(0, 8)
+local ChannelUsers = Instance.new("TextButton")
+ChannelUsers.Size = UDim2.new(1, -16, 0, 32); ChannelUsers.Position = UDim2.new(0, 8, 0, 12); ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.Text = "  #  users-network"; ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); ChannelUsers.Font = Enum.Font.GothamSemibold; ChannelUsers.TextSize = 13; ChannelUsers.TextXAlignment = Enum.TextXAlignment.Left; ChannelUsers.Parent = Sidebar
+Instance.new("UICorner", ChannelUsers).CornerRadius = UDim.new(0, 4)
 
-local ContentHost = Instance.new("Frame")
-ContentHost.Size = UDim2.new(1, -140, 1, 0)
-ContentHost.Position = UDim2.new(0, 140, 0, 0)
-ContentHost.BackgroundTransparency = 1
-ContentHost.Parent = MainArea
+local ChannelServerChat = Instance.new("TextButton")
+ChannelServerChat.Size = UDim2.new(1, -16, 0, 32); ChannelServerChat.Position = UDim2.new(0, 8, 0, 48); ChannelServerChat.BackgroundTransparency = 1; ChannelServerChat.Text = "  #  server-chat"; ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164); ChannelServerChat.Font = Enum.Font.GothamSemibold; ChannelServerChat.TextSize = 13; ChannelServerChat.TextXAlignment = Enum.TextXAlignment.Left; ChannelServerChat.Parent = Sidebar
+Instance.new("UICorner", ChannelServerChat).CornerRadius = UDim.new(0, 4)
 
-local function createNavTab(name, layoutOrder)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 28)
-    btn.LayoutOrder = layoutOrder
-    btn.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
-    btn.BackgroundTransparency = 1
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(130, 135, 150)
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Parent = Navigation
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 8)
-    return btn
-end
+local ChannelGlobalChat = Instance.new("TextButton")
+ChannelGlobalChat.Size = UDim2.new(1, -16, 0, 32); ChannelGlobalChat.Position = UDim2.new(0, 8, 0, 84); ChannelGlobalChat.BackgroundTransparency = 1; ChannelGlobalChat.Text = "  💬  global-cross-chat"; ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164); ChannelGlobalChat.Font = Enum.Font.GothamSemibold; ChannelGlobalChat.TextSize = 12; ChannelGlobalChat.TextXAlignment = Enum.TextXAlignment.Left; ChannelGlobalChat.Parent = Sidebar
+Instance.new("UICorner", ChannelGlobalChat).CornerRadius = UDim.new(0, 4)
 
-local TabUsers = createNavTab("Network Entities", 1)
-local TabGlobal = createNavTab("Global Link", 2)
-local TabPanel = createNavTab("Admin Control", 3)
-TabPanel.Visible = false
+local ChannelExecPanel = Instance.new("TextButton")
+ChannelExecPanel.Size = UDim2.new(1, -16, 0, 32); ChannelExecPanel.Position = UDim2.new(0, 8, 0, 120); ChannelExecPanel.BackgroundTransparency = 1; ChannelExecPanel.Text = "  🛠️  executor-panel"; ChannelExecPanel.TextColor3 = Color3.fromRGB(148, 155, 164); ChannelExecPanel.Font = Enum.Font.GothamSemibold; ChannelExecPanel.TextSize = 12; ChannelExecPanel.TextXAlignment = Enum.TextXAlignment.Left; ChannelExecPanel.Visible = false; ChannelExecPanel.Parent = Sidebar
+Instance.new("UICorner", ChannelExecPanel).CornerRadius = UDim.new(0, 4)
 
-local UsersFrame = Instance.new("ScrollingFrame")
-UsersFrame.Size = UDim2.new(1, -16, 1, -16)
-UsersFrame.Position = UDim2.new(0, 8, 0, 8)
-UsersFrame.BackgroundTransparency = 1
-UsersFrame.BorderSizePixel = 0
-UsersFrame.ScrollBarThickness = 3
-UsersFrame.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
-UsersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-UsersFrame.Parent = ContentHost
+local ViewContainer = Instance.new("Frame")
+ViewContainer.Size = UDim2.new(1, -190, 1, 0); ViewContainer.Position = UDim2.new(0, 190, 0, 0); ViewContainer.BackgroundTransparency = 1; ViewContainer.Parent = BodyFrame
 
-local UsersLayout = Instance.new("UIListLayout", UsersFrame)
-UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UsersLayout.Padding = UDim.new(0, 6)
+local UsersView = Instance.new("ScrollingFrame")
+UsersView.Size = UDim2.new(1, -20, 1, -20); UsersView.Position = UDim2.new(0, 10, 0, 10); UsersView.BackgroundTransparency = 1; UsersView.BorderSizePixel = 0; UsersView.ScrollBarThickness = 4; UsersView.Parent = ViewContainer
+local UsersLayout = Instance.new("UIListLayout", UsersView); UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder; UsersLayout.Padding = UDim.new(0, 4)
 
 UsersLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    UsersFrame.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 8)
+    UsersView.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local ChatFrame = Instance.new("Frame")
-ChatFrame.Size = UDim2.new(1, -16, 1, -16)
-ChatFrame.Position = UDim2.new(0, 8, 0, 8)
-ChatFrame.BackgroundTransparency = 1
-ChatFrame.Visible = false
-ChatFrame.Parent = ContentHost
+local ChatView = Instance.new("Frame")
+ChatView.Size = UDim2.new(1, -20, 1, -20); ChatView.Position = UDim2.new(0, 10, 0, 10); ChatView.BackgroundTransparency = 1; ChatView.Visible = false; ChatView.Parent = ViewContainer
 
-local ChatScroll = Instance.new("ScrollingFrame")
-ChatScroll.Size = UDim2.new(1, 0, 1, -38)
-ChatScroll.BackgroundTransparency = 1
-ChatScroll.BorderSizePixel = 0
-ChatScroll.ScrollBarThickness = 3
-ChatScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
-ChatScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-ChatScroll.Parent = ChatFrame
-
-local ChatLayout = Instance.new("UIListLayout", ChatScroll)
-ChatLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ChatLayout.Padding = UDim.new(0, 4)
+local ChatScrolling = Instance.new("ScrollingFrame")
+ChatScrolling.Size = UDim2.new(1, 0, 1, -45); ChatScrolling.BackgroundTransparency = 1; ChatScrolling.BorderSizePixel = 0; ChatScrolling.ScrollBarThickness = 4; ChatScrolling.Parent = ChatView
+local ChatLayout = Instance.new("UIListLayout", ChatScrolling); ChatLayout.SortOrder = Enum.SortOrder.LayoutOrder; ChatLayout.Padding = UDim.new(0, 6)
 
 ChatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ChatScroll.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y + 4)
-    ChatScroll.CanvasPosition = Vector2.new(0, math.max(0, ChatScroll.CanvasSize.Y.Offset - ChatScroll.AbsoluteSize.Y))
+    ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y)
+    ChatScrolling.CanvasPosition = Vector2.new(0, math.max(0, ChatScrolling.CanvasSize.Y.Offset - ChatScrolling.AbsoluteSize.Y))
 end)
 
-local ChatInput = Instance.new("TextBox")
-ChatInput.Size = UDim2.new(1, 0, 0, 30)
-ChatInput.Position = UDim2.new(0, 0, 1, -30)
-ChatInput.BackgroundColor3 = Color3.fromRGB(25, 27, 34)
-ChatInput.TextColor3 = Color3.fromRGB(220, 222, 230)
-ChatInput.Font = Enum.Font.Gotham
-ChatInput.TextSize = 11
-ChatInput.PlaceholderText = "Write transmission..."
-ChatInput.PlaceholderColor3 = Color3.fromRGB(80, 84, 100)
-ChatInput.TextXAlignment = Enum.TextXAlignment.Left
-ChatInput.ClearTextOnFocus = false
-ChatInput.Parent = ChatFrame
-Instance.new("UICorner", ChatInput).CornerRadius = UDim.new(0, 5)
-Instance.new("UIPadding", ChatInput).PaddingLeft = UDim.new(0, 8)
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(1, 0, 0, 38); TextBox.Position = UDim2.new(0, 0, 1, -38); TextBox.BackgroundColor3 = Color3.fromRGB(56, 58, 64); TextBox.TextColor3 = Color3.fromRGB(219, 222, 225); TextBox.Font = Enum.Font.Gotham; TextBox.TextSize = 14; TextBox.TextXAlignment = Enum.TextXAlignment.Left; TextBox.ClearTextOnFocus = true; TextBox.Parent = ChatView
+Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 12); Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
 
-local PanelFrame = Instance.new("Frame")
-PanelFrame.Size = UDim2.new(1, -16, 1, -16)
-PanelFrame.Position = UDim2.new(0, 8, 0, 8)
-PanelFrame.BackgroundTransparency = 1
-PanelFrame.Visible = false
-PanelFrame.Parent = ContentHost
+local ExecPanelFrame = Instance.new("Frame")
+ExecPanelFrame.Size = UDim2.new(1, -20, 1, -20); ExecPanelFrame.Position = UDim2.new(0, 10, 0, 10); ExecPanelFrame.BackgroundTransparency = 1; ExecPanelFrame.Visible = false; ExecPanelFrame.Parent = ViewContainer
 
-local TargetList = Instance.new("ScrollingFrame")
-TargetList.Size = UDim2.new(0, 150, 1, 0)
-TargetList.BackgroundColor3 = Color3.fromRGB(22, 23, 28)
-TargetList.BorderSizePixel = 0
-TargetList.ScrollBarThickness = 3
-TargetList.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
-TargetList.CanvasSize = UDim2.new(0, 0, 0, 0)
-TargetList.Parent = PanelFrame
-Instance.new("UICorner", TargetList).CornerRadius = UDim.new(0, 6)
-
-local TargetLayout = Instance.new("UIListLayout", TargetList)
-TargetLayout.Padding = UDim.new(0, 2)
-local TargetPad = Instance.new("UIPadding", TargetList)
-TargetPad.PaddingTop = UDim.new(0, 4)
-TargetPad.PaddingLeft = UDim.new(0, 4)
-TargetPad.PaddingRight = UDim.new(0, 4)
+local TargetScroller = Instance.new("ScrollingFrame")
+TargetScroller.Size = UDim2.new(0, 200, 1, 0); TargetScroller.BackgroundColor3 = Color3.fromRGB(30, 31, 34); TargetScroller.BorderSizePixel = 0; TargetScroller.ScrollBarThickness = 4; TargetScroller.Parent = ExecPanelFrame
+local TargetLayout = Instance.new("UIListLayout", TargetScroller); TargetLayout.Padding = UDim.new(0, 4)
+Instance.new("UICorner", TargetScroller).CornerRadius = UDim.new(0, 6)
 
 TargetLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    TargetList.CanvasSize = UDim2.new(0, 0, 0, TargetLayout.AbsoluteContentSize.Y + 8)
+    TargetScroller.CanvasSize = UDim2.new(0, 0, 0, TargetLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local ActionsContainer = Instance.new("Frame")
-ActionsContainer.Size = UDim2.new(1, -158, 1, 0)
-ActionsContainer.Position = UDim2.new(0, 158, 0, 0)
-ActionsContainer.BackgroundColor3 = Color3.fromRGB(22, 23, 28)
-ActionsContainer.BorderSizePixel = 0
-ActionsContainer.Parent = PanelFrame
-Instance.new("UICorner", ActionsContainer).CornerRadius = UDim.new(0, 6)
+local ControlPanel = Instance.new("Frame")
+ControlPanel.Size = UDim2.new(1, -210, 1, 0); ControlPanel.Position = UDim2.new(0, 210, 0, 0); ControlPanel.BackgroundColor3 = Color3.fromRGB(43, 45, 49); ControlPanel.Parent = ExecPanelFrame
+Instance.new("UICorner", ControlPanel).CornerRadius = UDim.new(0, 6)
 
-local SelectedTargetLabel = Instance.new("TextLabel")
-SelectedTargetLabel.Size = UDim2.new(1, -16, 0, 26)
-SelectedTargetLabel.Position = UDim2.new(0, 8, 0, 4)
-SelectedTargetLabel.BackgroundTransparency = 1
-SelectedTargetLabel.Text = "TARGET: NONE"
-SelectedTargetLabel.TextColor3 = Color3.fromRGB(150, 155, 170)
-SelectedTargetLabel.Font = Enum.Font.GothamBold
-SelectedTargetLabel.TextSize = 10
-SelectedTargetLabel.TextXAlignment = Enum.TextXAlignment.Left
-SelectedTargetLabel.Parent = ActionsContainer
+local TopActionFrame = Instance.new("Frame")
+TopActionFrame.Size = UDim2.new(1, 0, 0, 140); TopActionFrame.BackgroundTransparency = 1; TopActionFrame.Parent = ControlPanel
 
-local function createActionBtn(text, pos, bgCol)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.46, 0, 0, 30)
-    btn.Position = pos
-    btn.BackgroundColor3 = bgCol
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(240, 242, 250)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
-    btn.Parent = ActionsContainer
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    return btn
-end
+local ActiveTargetTitle = Instance.new("TextLabel")
+ActiveTargetTitle.Size = UDim2.new(1, 0, 0, 25); ActiveTargetTitle.Position = UDim2.new(0, 10, 0, 5); ActiveTargetTitle.BackgroundTransparency = 1; ActiveTargetTitle.Text = "Selected Target: none"; ActiveTargetTitle.TextColor3 = Color3.fromRGB(255, 255, 255); ActiveTargetTitle.Font = Enum.Font.GothamBold; ActiveTargetTitle.TextSize = 13; ActiveTargetTitle.TextXAlignment = Enum.TextXAlignment.Left; ActiveTargetTitle.Parent = TopActionFrame
 
-local BringBtn = createActionBtn("TELEPORT LOCALLY", UDim2.new(0, 8, 0, 36), Color3.fromRGB(44, 52, 78))
-local ToMeBtn = createActionBtn("PULL TO POSITION", UDim2.new(0.5, 2, 0, 36), Color3.fromRGB(38, 64, 56))
-local KillBtn = createActionBtn("FORCE NEUTRALIZE", UDim2.new(0, 8, 0, 72), Color3.fromRGB(74, 38, 44))
-local ExplodeBtn = createActionBtn("EXPULSION DETONATE", UDim2.new(0.5, 2, 0, 72), Color3.fromRGB(80, 54, 32))
+local BringBtn = Instance.new("TextButton")
+BringBtn.Size = UDim2.new(0, 115, 0, 28); BringBtn.Position = UDim2.new(0, 10, 0, 35); BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); BringBtn.Text = "Bring User (Server)"; BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255); BringBtn.Font = Enum.Font.GothamBold; BringBtn.TextSize = 10; BringBtn.Parent = TopActionFrame
+Instance.new("UICorner", BringBtn).CornerRadius = UDim.new(0, 4)
 
-local function setTab(tab)
+local TeleportToMeBtn = Instance.new("TextButton")
+TeleportToMeBtn.Size = UDim2.new(1, -145, 0, 28); TeleportToMeBtn.Position = UDim2.new(0, 135, 0, 35); TeleportToMeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90); TeleportToMeBtn.Text = "Teleport User to Me"; TeleportToMeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TeleportToMeBtn.Font = Enum.Font.GothamBold; TeleportToMeBtn.TextSize = 10; TeleportToMeBtn.Parent = TopActionFrame
+Instance.new("UICorner", TeleportToMeBtn).CornerRadius = UDim.new(0, 4)
+
+local RemoteKillBtn = Instance.new("TextButton")
+RemoteKillBtn.Size = UDim2.new(0, 115, 0, 28); RemoteKillBtn.Position = UDim2.new(0, 10, 0, 70); RemoteKillBtn.BackgroundColor3 = Color3.fromRGB(242, 63, 67); RemoteKillBtn.Text = "Remote Kill"; RemoteKillBtn.TextColor3 = Color3.fromRGB(255, 255, 255); RemoteKillBtn.Font = Enum.Font.GothamBold; RemoteKillBtn.TextSize = 11; RemoteKillBtn.Parent = TopActionFrame
+Instance.new("UICorner", RemoteKillBtn).CornerRadius = UDim.new(0, 4)
+
+local RemoteExplodeBtn = Instance.new("TextButton")
+RemoteExplodeBtn.Size = UDim2.new(1, -145, 0, 28); RemoteExplodeBtn.Position = UDim2.new(0, 135, 0, 70); RemoteExplodeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34); RemoteExplodeBtn.Text = "Remote Explode"; RemoteExplodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); RemoteExplodeBtn.Font = Enum.Font.GothamBold; RemoteExplodeBtn.TextSize = 11; RemoteExplodeBtn.Parent = TopActionFrame
+Instance.new("UICorner", RemoteExplodeBtn).CornerRadius = UDim.new(0, 4)
+
+local function selectTab(tab)
     currentTab = tab
-    TabUsers.BackgroundTransparency, TabUsers.TextColor3 = 1, Color3.fromRGB(130, 135, 150)
-    TabGlobal.BackgroundTransparency, TabGlobal.TextColor3 = 1, Color3.fromRGB(130, 135, 150)
-    TabPanel.BackgroundTransparency, TabPanel.TextColor3 = 1, Color3.fromRGB(130, 135, 150)
-    UsersFrame.Visible, ChatFrame.Visible, PanelFrame.Visible = false, false, false
+    ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelServerChat.BackgroundTransparency = 1; ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelGlobalChat.BackgroundTransparency = 1; ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelExecPanel.BackgroundTransparency = 1; ChannelExecPanel.TextColor3 = Color3.fromRGB(148, 155, 164)
+    UsersView.Visible = false; ChatView.Visible = false; ExecPanelFrame.Visible = false
 
     if tab == "users" then
-        TabUsers.BackgroundTransparency, TabUsers.TextColor3 = 0, Color3.fromRGB(230, 235, 250)
-        UsersFrame.Visible = true
+        ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); UsersView.Visible = true
+    elseif tab == "server" then
+        ChannelServerChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255); TextBox.PlaceholderText = "Message #server-chat"; ChatView.Visible = true
     elseif tab == "global" then
-        TabGlobal.BackgroundTransparency, TabGlobal.TextColor3 = 0, Color3.fromRGB(230, 235, 250)
-        ChatFrame.Visible = true
-    elseif tab == "panel" then
-        TabPanel.BackgroundTransparency, TabPanel.TextColor3 = 0, Color3.fromRGB(230, 235, 250)
-        PanelFrame.Visible = true
+        ChannelGlobalChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255); TextBox.PlaceholderText = "Message #global-cross-chat"; ChatView.Visible = true
+    elseif tab == "exec" then
+        ChannelExecPanel.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelExecPanel.TextColor3 = Color3.fromRGB(255, 255, 255); ExecPanelFrame.Visible = true
     end
 end
 
-TabUsers.MouseButton1Click:Connect(function() setTab("users") end)
-TabGlobal.MouseButton1Click:Connect(function() setTab("global") end)
-TabPanel.MouseButton1Click:Connect(function() setTab("panel") end)
+ChannelUsers.MouseButton1Click:Connect(function() selectTab("users") end)
+ChannelServerChat.MouseButton1Click:Connect(function() selectTab("server") end)
+ChannelGlobalChat.MouseButton1Click:Connect(function() selectTab("global") end)
+ChannelExecPanel.MouseButton1Click:Connect(function() selectTab("exec") end)
 
--- GRID POPULATION WITH SAFETY CHECKS
-local function populateUserGrid(data)
-    for _, child in ipairs(UsersFrame:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
-    for _, child in ipairs(TargetList:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-
-    local unique = {}
+local function refreshUIList(data)
+    for _, child in ipairs(UsersView:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    for _, child in ipairs(TargetScroller:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    
+    local uniquePool = {}
     for _, user in ipairs(data) do
-        local uName = safeString(user.username, "Unknown")
-        if not unique[uName] then
-            unique[uName] = true
+        local uName = tostring(user.username or "Unknown")
+        if not uniquePool[uName] then
+            uniquePool[uName] = true
 
-            local Item = Instance.new("Frame")
-            Item.Size = UDim2.new(1, 0, 0, 40)
-            Item.BackgroundColor3 = Color3.fromRGB(24, 25, 31)
-            Item.BorderSizePixel = 0
-            Item.Parent = UsersFrame
-            Instance.new("UICorner", Item).CornerRadius = UDim.new(0, 6)
+            local PlayerRow = Instance.new("Frame")
+            PlayerRow.Size = UDim2.new(1, -6, 0, 45); PlayerRow.BackgroundColor3 = Color3.fromRGB(43, 45, 49); PlayerRow.Parent = UsersView
+            Instance.new("UICorner", PlayerRow).CornerRadius = UDim.new(0, 4)
 
-            local NameText = Instance.new("TextLabel")
-            NameText.Size = UDim2.new(0.65, 0, 0, 18)
-            NameText.Position = UDim2.new(0, 10, 0, 3)
-            NameText.BackgroundTransparency = 1
-            NameText.RichText = true
-            NameText.Font = Enum.Font.GothamMedium
-            NameText.TextSize = 11
-            NameText.TextXAlignment = Enum.TextXAlignment.Left
-
-            local tagBadge = ""
-            if user.is_admin == true then
-                tagBadge = "<font color='rgb(255,215,0)'><b>[ROOT ADMIN]</b></font> "
-            elseif user.is_sub_admin == true then
-                tagBadge = "<font color='rgb(180,120,240)'><b>[OPERATOR]</b></font> "
-            elseif uName == Username then
-                tagBadge = "<font color='rgb(120,220,140)'><b>[LOCAL]</b></font> "
+            local NameLabel = Instance.new("TextLabel")
+            NameLabel.Size = UDim2.new(0.4, -10, 0, 22); NameLabel.Position = UDim2.new(0, 10, 0, 2); NameLabel.BackgroundTransparency = 1
+            NameLabel.Text = uName; NameLabel.Font = Enum.Font.GothamSemibold; NameLabel.TextSize = 13; NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+            
+            if user.is_admin == true then 
+                NameLabel.TextColor3 = Color3.fromRGB(255, 235, 59); NameLabel.Text = "👑 " .. uName
+            elseif user.is_sub_admin == true then 
+                NameLabel.TextColor3 = Color3.fromRGB(168, 85, 247); NameLabel.Text = "🛡️ " .. uName
+            elseif uName == Username then 
+                NameLabel.TextColor3 = Color3.fromRGB(242, 243, 245); NameLabel.Text = uName .. " (You)"
+            else 
+                NameLabel.TextColor3 = Color3.fromRGB(148, 155, 164) 
             end
+            NameLabel.Parent = PlayerRow
 
-            NameText.Text = tagBadge .. truncate(uName, 18)
-            NameText.TextColor3 = Color3.fromRGB(230, 232, 240)
-            NameText.Parent = Item
-
-            local safeGame = safeString(user.current_game, "Roblox Experience")
-            local safeExec = safeString(user.executor, "Exec")
-
-            local InfoText = Instance.new("TextLabel")
-            InfoText.Size = UDim2.new(0.65, 0, 0, 14)
-            InfoText.Position = UDim2.new(0, 10, 0, 21)
-            InfoText.BackgroundTransparency = 1
-            InfoText.Text = truncate(safeGame, 16) .. "  •  " .. truncate(safeExec, 10)
-            InfoText.Font = Enum.Font.Gotham
-            InfoText.TextSize = 9
-            InfoText.TextColor3 = Color3.fromRGB(110, 115, 130)
-            InfoText.TextXAlignment = Enum.TextXAlignment.Left
-            InfoText.Parent = Item
+            local Subtitle = Instance.new("TextLabel")
+            Subtitle.Size = UDim2.new(0.6, 0, 0, 18); Subtitle.Position = UDim2.new(0, 10, 0, 22); Subtitle.BackgroundTransparency = 1
+            Subtitle.Text = "🎮 " .. tostring(user.current_game or "Roblox") .. " | ⚙️ " .. tostring(user.executor or "Exec"); Subtitle.TextColor3 = Color3.fromRGB(110, 115, 122); Subtitle.Font = Enum.Font.Gotham; Subtitle.TextSize = 10; Subtitle.TextXAlignment = Enum.TextXAlignment.Left; Subtitle.Parent = PlayerRow
 
             if uName ~= Username then
-                local Join = Instance.new("TextButton")
-                Join.Size = UDim2.new(0, 52, 0, 22)
-                Join.Position = UDim2.new(1, -60, 0.5, -11)
-                Join.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
-                Join.Text = "JOIN"
-                Join.TextColor3 = Color3.fromRGB(190, 195, 210)
-                Join.Font = Enum.Font.GothamBold
-                Join.TextSize = 9
-                Join.Parent = Item
-                Instance.new("UICorner", Join).CornerRadius = UDim.new(0, 4)
-                
-                Join.MouseButton1Click:Connect(function()
+                local JoinBtn = Instance.new("TextButton")
+                JoinBtn.Size = UDim2.new(0, 65, 0, 26); JoinBtn.Position = UDim2.new(1, -75, 0, 9); JoinBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90); JoinBtn.Text = "Join Game"; JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255); JoinBtn.Font = Enum.Font.GothamBold; JoinBtn.TextSize = 10; JoinBtn.Parent = PlayerRow
+                Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 4)
+                JoinBtn.MouseButton1Click:Connect(function() 
                     if user.place_id and user.job_id then
-                        TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+                        TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer) 
                     end
                 end)
 
-                local TargetBtn = Instance.new("TextButton")
-                TargetBtn.Size = UDim2.new(1, 0, 0, 24)
-                TargetBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(40, 44, 56) or Color3.fromRGB(26, 28, 35)
-                TargetBtn.Text = truncate(uName, 16)
-                TargetBtn.TextColor3 = Color3.fromRGB(180, 184, 195)
-                TargetBtn.Font = Enum.Font.GothamMedium
-                TargetBtn.TextSize = 10
-                TargetBtn.TextXAlignment = Enum.TextXAlignment.Left
-                TargetBtn.Parent = TargetList
-                Instance.new("UICorner", TargetBtn).CornerRadius = UDim.new(0, 4)
-                Instance.new("UIPadding", TargetBtn).PaddingLeft = UDim.new(0, 6)
+                local TargetSelectorBtn = Instance.new("TextButton")
+                TargetSelectorBtn.Size = UDim2.new(1, -10, 0, 32); TargetSelectorBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(53, 55, 60) or Color3.fromRGB(43, 45, 49)
+                TargetSelectorBtn.Text = "  " .. uName; TargetSelectorBtn.TextColor3 = Color3.fromRGB(219, 222, 225); TargetSelectorBtn.Font = Enum.Font.GothamSemibold; TargetSelectorBtn.TextSize = 12; TargetSelectorBtn.TextXAlignment = Enum.TextXAlignment.Left; TargetSelectorBtn.Parent = TargetScroller
+                Instance.new("UICorner", TargetSelectorBtn).CornerRadius = UDim.new(0, 4)
 
-                TargetBtn.MouseButton1Click:Connect(function()
+                TargetSelectorBtn.MouseButton1Click:Connect(function()
                     SelectedTarget = uName
-                    SelectedTargetLabel.Text = "TARGET: " .. string.upper(uName)
-                    for _, b in ipairs(TargetList:GetChildren()) do
-                        if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(26, 28, 35) end
+                    ActiveTargetTitle.Text = "Selected Target: " .. uName
+                    for _, btn in ipairs(TargetScroller:GetChildren()) do
+                        if btn:IsA("TextButton") then btn.BackgroundColor3 = Color3.fromRGB(43, 45, 49) end
                     end
-                    TargetBtn.BackgroundColor3 = Color3.fromRGB(40, 44, 56)
+                    TargetSelectorBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
                 end)
             end
         end
     end
 end
 
-local function populateChat(records, adminGroup)
-    for _, child in ipairs(ChatScroll:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
-    for _, msg in ipairs(records) do
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 18)
-        Container.BackgroundTransparency = 1
-        Container.Parent = ChatScroll
+local function refreshChatUI(messages, adminPool)
+    for _, child in ipairs(ChatScrolling:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    for _, msg in ipairs(messages) do
+        local MsgFrame = Instance.new("Frame")
+        MsgFrame.Size = UDim2.new(1, 0, 0, 24); MsgFrame.BackgroundTransparency = 1; MsgFrame.Parent = ChatScrolling
 
-        local Content = Instance.new("TextLabel")
-        Content.Size = UDim2.new(1, 0, 1, 0)
-        Content.BackgroundTransparency = 1
-        Content.TextXAlignment = Enum.TextXAlignment.Left
-        Content.Font = Enum.Font.Gotham
-        Content.TextSize = 11
-        Content.RichText = true
+        local MsgLabel = Instance.new("TextLabel")
+        MsgLabel.Size = UDim2.new(1, 0, 1, 0); MsgLabel.BackgroundTransparency = 1; MsgLabel.TextXAlignment = Enum.TextXAlignment.Left; MsgLabel.Font = Enum.Font.Gotham; MsgLabel.TextSize = 13; MsgLabel.RichText = true
         
-        local safeName = safeString(msg.username, "Unknown")
-        local tagColor = adminGroup[safeName] and "rgb(255, 215, 0)" or "rgb(160, 165, 180)"
-        Content.Text = string.format("<font color='%s'>%s</font>: %s", tagColor, truncate(safeName, 14), sanitizeText(msg.message))
-        Content.TextColor3 = Color3.fromRGB(215, 218, 225)
-        Content.Parent = Container
+        local nameColor = adminPool[msg.username] and "rgb(255, 235, 59)" or "rgb(242, 243, 245)"
+        local displayMsg = sanitizeText(msg.message)
+        
+        MsgLabel.Text = string.format("<font color='%s'><b>%s</b></font>: %s", nameColor, tostring(msg.username or "Unknown"), displayMsg)
+        MsgLabel.TextColor3 = Color3.fromRGB(219, 222, 225); MsgLabel.Parent = MsgFrame
     end
 end
 
--- DATABASE BACKEND 
+-- --- NETWORK BACKEND ---
 local function updatePresence()
     if not running then return end
-    
-    local res = request({
+    request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync?on_conflict=username",
         Method = "POST",
-        Headers = {
-            ["apikey"] = SUPABASE_KEY,
-            ["Authorization"] = "Bearer " .. SUPABASE_KEY,
-            ["Content-Type"] = "application/json",
-            ["Prefer"] = "resolution=merge-duplicates"
+        Headers = { 
+            ["apikey"] = SUPABASE_KEY, 
+            ["Authorization"] = "Bearer " .. SUPABASE_KEY, 
+            ["Content-Type"] = "application/json", 
+            ["Prefer"] = "resolution=merge-duplicates" 
         },
-        Body = HttpService:JSONEncode({
+        Body = HttpService:JSONEncode({ 
             user_id = UserId,
-            username = Username,
-            job_id = JobId,
-            place_id = PlaceId,
-            current_game = gameName,
-            executor = myExecutor,
-            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-            teleport_target = "none",
-            active_effect = "none"
-        })
-    })
-
-    if res and res.StatusCode > 299 then
-        warn("[Network] Sync POST error: HTTP", res.StatusCode, res.Body)
-    end
-end
-
-local function dispatchCommand(actionType, targetUser)
-    if not (IsAdmin or IsSubAdmin) or ADMIN_KEY == "" or targetUser == "none" then return end
-    request({
-        Url = SUPABASE_URL .. "/rest/v1/remote_commands",
-        Method = "POST",
-        Headers = {
-            ["apikey"] = SUPABASE_KEY,
-            ["Authorization"] = "Bearer " .. SUPABASE_KEY,
-            ["Content-Type"] = "application/json",
-            ["x-admin-key"] = ADMIN_KEY
-        },
-        Body = HttpService:JSONEncode({
-            sender_user_id = UserId,
-            target_username = targetUser,
-            action = actionType
+            username = Username, 
+            job_id = JobId, 
+            place_id = PlaceId, 
+            current_game = gameName, 
+            executor = myExecutor, 
+            updated_at = "now()", 
+            teleport_target = _G.CurrentTpTarget, 
+            active_effect = _G.CurrentActiveEffect 
         })
     })
 end
 
-local function transmitMessage(str)
-    local filtered = sanitizeText(str)
-    if filtered == "" or #filtered > 300 then return end
+local function sendChatMessage(text)
+    local cleanMsg = sanitizeText(text)
+    if cleanMsg == "" then return end
+    if tick() - lastChatTime < 1.5 then return end
+    lastChatTime = tick()
+
+    local targetPayload = { username = Username, message = cleanMsg }
+    if currentTab == "server" then targetPayload.job_id = JobId end
+
     request({
         Url = SUPABASE_URL .. "/rest/v1/executor_chat",
         Method = "POST",
-        Headers = {
-            ["apikey"] = SUPABASE_KEY,
-            ["Authorization"] = "Bearer " .. SUPABASE_KEY,
-            ["Content-Type"] = "application/json"
-        },
-        Body = HttpService:JSONEncode({ username = Username, message = filtered })
+        Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY, ["Content-Type"] = "application/json" },
+        Body = HttpService:JSONEncode(targetPayload)
     })
 end
 
-local function fetchNetworkData()
+local function fetchData()
     if not running then return end
     
-    -- Added &nocache= to prevent exploit executors from returning a stale, cached GET response
-    local syncRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50&nocache=" .. tostring(tick()),
+    local resUser = request({
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
-
-    local adminGroup = {}
-    if not syncRes then
-        warn("[Network] Sync GET request dropped.")
-    elseif syncRes.StatusCode ~= 200 then
-        warn("[Network] Sync GET error: HTTP", syncRes.StatusCode, syncRes.Body)
-    else
-        local success, userlist = pcall(function() return HttpService:JSONDecode(syncRes.Body) end)
-        if success and type(userlist) == "table" then
-            for _, u in ipairs(userlist) do
-                if u.is_admin == true or u.is_sub_admin == true then
-                    adminGroup[safeString(u.username, "Unknown")] = true
+    
+    local adminPool = {}
+    if resUser and resUser.StatusCode == 200 then
+        local success, users = pcall(function() return HttpService:JSONDecode(resUser.Body) end)
+        if success and type(users) == "table" then
+            for _, u in ipairs(users) do
+                if u.is_admin == true or u.is_sub_admin == true then 
+                    adminPool[u.username] = true 
                 end
-                if u.user_id == UserId or safeString(u.username, "") == Username then
+                if u.user_id == UserId or u.username == Username then
                     IsAdmin = (u.is_admin == true)
                     IsSubAdmin = (u.is_sub_admin == true)
-                    TabPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
+                    ChannelExecPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
                 end
             end
-            populateUserGrid(userlist)
-        else
-            warn("[Network] Failed to parse sync JSON array.")
-        end
-    end
-
-    local cmdRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/remote_commands?target_username=in.(" .. Username .. ",all)&order=created_at.desc&limit=8&nocache=" .. tostring(tick()),
-        Method = "GET",
-        Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
-    })
-
-    if cmdRes and cmdRes.StatusCode == 200 then
-        pcall(function()
-            local cmds = HttpService:JSONDecode(cmdRes.Body)
-            for _, c in ipairs(cmds) do
-                if not handledCommands[c.id] then
-                    handledCommands[c.id] = true
-                    if c.action == "kill" or c.action == "explode" then
-                        runExplosionEffect(Username)
-                    elseif c.action == "teleport_to" then
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p.UserId == c.sender_user_id and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                                local myChar = LocalPlayer.Character
-                                if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                                    myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                                end
-                                break
-                            end
+            
+            refreshUIList(users)
+            
+            -- SAFE ROLE-BASED INTERCEPTOR
+            for _, user in ipairs(users) do
+                if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
+                    if tick() - lastTeleportTime > 5 then 
+                        if user.is_admin == true or user.is_sub_admin == true then
+                            lastTeleportTime = tick() 
+                            TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
                         end
-                    elseif c.action == "bring" then
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p.UserId == c.sender_user_id then
-                                TeleportService:TeleportToPlaceInstance(PlaceId, JobId, LocalPlayer)
-                                break
+                    end
+                end
+
+                if user.active_effect and user.active_effect ~= "none" then
+                    local cmdData = string.split(user.active_effect, ":")
+                    local action = cmdData[1]
+                    local target = cmdData[2]
+                    local uniqueHash = cmdData[3] 
+
+                    if uniqueHash and not handledCommands[uniqueHash] then
+                        if user.is_admin == true or user.is_sub_admin == true then
+                            handledCommands[uniqueHash] = true 
+                            if action == "kill" or action == "explode" then
+                                if target == Username or target == "all" then 
+                                    runLocalExplosionEffect(Username)
+                                end
+                            elseif action == "teleport_to" and target == Username then
+                                for _, p in ipairs(Players:GetPlayers()) do
+                                    if p.Name == user.username and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                        local myChar = LocalPlayer.Character
+                                        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                                            myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                                        end
+                                        break
+                                    end
+                                end
                             end
                         end
                     end
                 end
             end
-        end)
+        end
     end
 
-    local chatRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_chat?order=created_at.desc&limit=25&nocache=" .. tostring(tick()),
+    local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
+    local resChat = request({
+        Url = SUPABASE_URL .. "/rest/v1/executor_chat?" .. queryFilter .. "&order=created_at.desc&limit=30",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
-    
-    if chatRes and chatRes.StatusCode == 200 then
-        pcall(function()
-            local logs = HttpService:JSONDecode(chatRes.Body)
-            local ordered = {}
-            for i = #logs, 1, -1 do table.insert(ordered, logs[i]) end
-            populateChat(ordered, adminGroup)
-        end)
+    if resChat and resChat.StatusCode == 200 then
+        local success, msgs = pcall(function() return HttpService:JSONDecode(resChat.Body) end)
+        if success and type(msgs) == "table" then
+            local orderedMsgs = {}
+            for i = #msgs, 1, -1 do table.insert(orderedMsgs, msgs[i]) end
+            refreshChatUI(orderedMsgs, adminPool)
+        end
     end
 end
 
-ChatInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed and ChatInput.Text ~= "" then
-        local raw = ChatInput.Text
-        ChatInput.Text = ""
-        task.spawn(function()
-            transmitMessage(raw)
-            fetchNetworkData()
+-- --- INPUT HANDLERS ---
+TextBox.FocusLost:Connect(function(enterPressed) 
+    if enterPressed then 
+        local text = TextBox.Text
+        TextBox.Text = "" 
+        task.spawn(function() 
+            sendChatMessage(text) 
+            fetchData() 
+        end) 
+    end 
+end)
+
+BringBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
+        _G.CurrentTpTarget = SelectedTarget
+        updatePresence()
+        task.delay(3, function() 
+            if _G.CurrentTpTarget == SelectedTarget then 
+                _G.CurrentTpTarget = "none" 
+                updatePresence() 
+            end 
         end)
     end
 end)
 
-BringBtn.MouseButton1Click:Connect(function() dispatchCommand("bring", SelectedTarget) end)
-ToMeBtn.MouseButton1Click:Connect(function() dispatchCommand("teleport_to", SelectedTarget) end)
-KillBtn.MouseButton1Click:Connect(function() dispatchCommand("kill", SelectedTarget) end)
-ExplodeBtn.MouseButton1Click:Connect(function() dispatchCommand("explode", SelectedTarget) end)
-
-local dragToggle, dragStart, startPos
-Topbar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragToggle = true
-        dragStart = input.Position
-        startPos = Root.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+TeleportToMeBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
+        local hash = tostring(os.time() .. math.random(1,1000))
+        _G.CurrentActiveEffect = "teleport_to:" .. SelectedTarget .. ":" .. hash
+        updatePresence()
+        task.delay(4, function()
+            if _G.CurrentActiveEffect:sub(1,11) == "teleport_to" then
+                _G.CurrentActiveEffect = "none"
+                updatePresence()
+            end
         end)
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement and dragToggle then
-        local delta = input.Position - dragStart
-        Root.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+RemoteKillBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
+        local hash = tostring(os.time() .. math.random(1,1000))
+        _G.CurrentActiveEffect = "kill:" .. SelectedTarget .. ":" .. hash
+        updatePresence()
+        task.delay(3, function() 
+            if _G.CurrentActiveEffect:sub(1,4) == "kill" then 
+                _G.CurrentActiveEffect = "none" 
+                updatePresence() 
+            end 
+        end)
     end
+end)
+
+RemoteExplodeBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
+        local hash = tostring(os.time() .. math.random(1,1000))
+        _G.CurrentActiveEffect = "explode:" .. SelectedTarget .. ":" .. hash
+        updatePresence()
+        task.delay(3, function() 
+            if _G.CurrentActiveEffect:sub(1,7) == "explode" then 
+                _G.CurrentActiveEffect = "none" 
+                updatePresence() 
+            end 
+        end)
+    end
+end)
+
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input) 
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+        dragging = true; dragStart = input.Position; startPos = WindowFrame.Position; 
+        input.Changed:Connect(function() 
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end 
+        end) 
+    end 
+end)
+
+TitleBar.InputChanged:Connect(function(input) 
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end 
+end)
+
+UserInputService.InputChanged:Connect(function(input) 
+    if input == dragInput and dragging then 
+        local delta = input.Position - dragStart 
+        WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) 
+    end 
 end)
 
 local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
+MinBtn.MouseButton1Click:Connect(function() 
     minimized = not minimized
-    MainArea.Visible = not minimized
-    Root.Size = minimized and UDim2.new(0, 620, 0, 36) or UDim2.new(0, 620, 0, 390)
+    BodyFrame.Visible = not minimized
+    WindowFrame.Size = minimized and UDim2.new(0, 680, 0, 32) or UDim2.new(0, 680, 0, 440) 
+    MinBtn.Text = minimized and "🗖" or "—" 
 end)
 
-CloseBtn.MouseButton1Click:Connect(function()
+CloseBtn.MouseButton1Click:Connect(function() 
     running = false
-    pcall(function() ScreenGui:Destroy() end)
+    pcall(function() ScreenGui:Destroy() end) 
 end)
 
-setTab("users")
+-- --- INITIALIZATION ---
 updatePresence()
-fetchNetworkData()
-
-task.spawn(function()
-    while running do
+fetchData()
+task.spawn(function() 
+    while running do 
         task.wait(4)
         updatePresence()
-        fetchNetworkData()
-    end
+        fetchData() 
+    end 
 end)
