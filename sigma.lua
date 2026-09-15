@@ -359,9 +359,9 @@ local function populateUserGrid(data)
             NameText.TextXAlignment = Enum.TextXAlignment.Left
 
             local tagBadge = ""
-            if user.is_admin then
+            if user.is_admin == true then
                 tagBadge = "<font color='rgb(255,215,0)'><b>[ROOT ADMIN]</b></font> "
-            elseif user.is_sub_admin then
+            elseif user.is_sub_admin == true then
                 tagBadge = "<font color='rgb(180,120,240)'><b>[OPERATOR]</b></font> "
             elseif uName == Username then
                 tagBadge = "<font color='rgb(120,220,140)'><b>[LOCAL]</b></font> "
@@ -453,7 +453,7 @@ end
 local function updatePresence()
     if not running then return end
     request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?on_conflict=username",
         Method = "POST",
         Headers = {
             ["apikey"] = SUPABASE_KEY,
@@ -520,10 +520,12 @@ local function fetchNetworkData()
     if syncRes and syncRes.StatusCode == 200 then
         local userlist = HttpService:JSONDecode(syncRes.Body)
         for _, u in ipairs(userlist) do
-            if u.is_admin or u.is_sub_admin then adminGroup[u.username] = true end
+            if u.is_admin == true or u.is_sub_admin == true then
+                adminGroup[u.username] = true
+            end
             if u.user_id == UserId or u.username == Username then
-                IsAdmin = u.is_admin or false
-                IsSubAdmin = u.is_sub_admin or false
+                IsAdmin = (u.is_admin == true)
+                IsSubAdmin = (u.is_sub_admin == true)
                 TabPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
             end
         end
