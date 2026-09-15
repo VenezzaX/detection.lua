@@ -7,7 +7,6 @@ local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
@@ -76,8 +75,8 @@ ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 
 local Root = Instance.new("Frame")
-Root.Size = UDim2.new(0, 600, 0, 380)
-Root.Position = UDim2.new(0.5, -300, 0.5, -190)
+Root.Size = UDim2.new(0, 620, 0, 390)
+Root.Position = UDim2.new(0.5, -310, 0.5, -195)
 Root.BackgroundColor3 = Color3.fromRGB(18, 19, 23)
 Root.BorderSizePixel = 0
 Root.Active = true
@@ -187,13 +186,18 @@ UsersFrame.Size = UDim2.new(1, -16, 1, -16)
 UsersFrame.Position = UDim2.new(0, 8, 0, 8)
 UsersFrame.BackgroundTransparency = 1
 UsersFrame.BorderSizePixel = 0
-UsersFrame.ScrollBarThickness = 2
+UsersFrame.ScrollBarThickness = 3
 UsersFrame.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
+UsersFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 UsersFrame.Parent = ContentHost
 
 local UsersLayout = Instance.new("UIListLayout", UsersFrame)
 UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UsersLayout.Padding = UDim.new(0, 4)
+UsersLayout.Padding = UDim.new(0, 6)
+
+UsersLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    UsersFrame.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 8)
+end)
 
 local ChatFrame = Instance.new("Frame")
 ChatFrame.Size = UDim2.new(1, -16, 1, -16)
@@ -206,13 +210,19 @@ local ChatScroll = Instance.new("ScrollingFrame")
 ChatScroll.Size = UDim2.new(1, 0, 1, -38)
 ChatScroll.BackgroundTransparency = 1
 ChatScroll.BorderSizePixel = 0
-ChatScroll.ScrollBarThickness = 2
+ChatScroll.ScrollBarThickness = 3
 ChatScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
+ChatScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 ChatScroll.Parent = ChatFrame
 
 local ChatLayout = Instance.new("UIListLayout", ChatScroll)
 ChatLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ChatLayout.Padding = UDim.new(0, 4)
+
+ChatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ChatScroll.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y + 4)
+    ChatScroll.CanvasPosition = Vector2.new(0, math.max(0, ChatScroll.CanvasSize.Y.Offset - ChatScroll.AbsoluteSize.Y))
+end)
 
 local ChatInput = Instance.new("TextBox")
 ChatInput.Size = UDim2.new(1, 0, 0, 30)
@@ -240,8 +250,9 @@ local TargetList = Instance.new("ScrollingFrame")
 TargetList.Size = UDim2.new(0, 150, 1, 0)
 TargetList.BackgroundColor3 = Color3.fromRGB(22, 23, 28)
 TargetList.BorderSizePixel = 0
-TargetList.ScrollBarThickness = 2
+TargetList.ScrollBarThickness = 3
 TargetList.ScrollBarImageColor3 = Color3.fromRGB(50, 54, 66)
+TargetList.CanvasSize = UDim2.new(0, 0, 0, 0)
 TargetList.Parent = PanelFrame
 Instance.new("UICorner", TargetList).CornerRadius = UDim.new(0, 6)
 
@@ -251,6 +262,10 @@ local TargetPad = Instance.new("UIPadding", TargetList)
 TargetPad.PaddingTop = UDim.new(0, 4)
 TargetPad.PaddingLeft = UDim.new(0, 4)
 TargetPad.PaddingRight = UDim.new(0, 4)
+
+TargetLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    TargetList.CanvasSize = UDim2.new(0, 0, 0, TargetLayout.AbsoluteContentSize.Y + 8)
+end)
 
 local ActionsContainer = Instance.new("Frame")
 ActionsContainer.Size = UDim2.new(1, -158, 1, 0)
@@ -314,64 +329,81 @@ TabGlobal.MouseButton1Click:Connect(function() setTab("global") end)
 TabPanel.MouseButton1Click:Connect(function() setTab("panel") end)
 
 local function populateUserGrid(data)
-    for _, child in ipairs(UsersFrame:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
-    for _, child in ipairs(TargetList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    for _, child in ipairs(UsersFrame:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    for _, child in ipairs(TargetList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
 
     local unique = {}
     for _, user in ipairs(data) do
-        if not unique[user.username] then
-            unique[user.username] = true
+        local uName = tostring(user.username or "Unknown")
+        if not unique[uName] then
+            unique[uName] = true
 
             local Item = Instance.new("Frame")
-            Item.Size = UDim2.new(1, 0, 0, 36)
+            Item.Size = UDim2.new(1, 0, 0, 40)
             Item.BackgroundColor3 = Color3.fromRGB(24, 25, 31)
             Item.BorderSizePixel = 0
             Item.Parent = UsersFrame
             Instance.new("UICorner", Item).CornerRadius = UDim.new(0, 6)
 
             local NameText = Instance.new("TextLabel")
-            NameText.Size = UDim2.new(0.5, 0, 0, 18)
-            NameText.Position = UDim2.new(0, 10, 0, 2)
+            NameText.Size = UDim2.new(0.65, 0, 0, 18)
+            NameText.Position = UDim2.new(0, 10, 0, 3)
             NameText.BackgroundTransparency = 1
-            NameText.Text = truncate(user.username, 16)
+            NameText.RichText = true
             NameText.Font = Enum.Font.GothamMedium
             NameText.TextSize = 11
             NameText.TextXAlignment = Enum.TextXAlignment.Left
-            NameText.TextColor3 = user.is_admin and Color3.fromRGB(235, 195, 75)
-                or user.is_sub_admin and Color3.fromRGB(160, 120, 230)
-                or (user.username == Username and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(140, 145, 160))
+
+            local tagBadge = ""
+            if user.is_admin then
+                tagBadge = "<font color='rgb(255,215,0)'><b>[ROOT ADMIN]</b></font> "
+            elseif user.is_sub_admin then
+                tagBadge = "<font color='rgb(180,120,240)'><b>[OPERATOR]</b></font> "
+            elseif uName == Username then
+                tagBadge = "<font color='rgb(120,220,140)'><b>[LOCAL]</b></font> "
+            end
+
+            NameText.Text = tagBadge .. truncate(uName, 18)
+            NameText.TextColor3 = Color3.fromRGB(230, 232, 240)
             NameText.Parent = Item
 
             local InfoText = Instance.new("TextLabel")
-            InfoText.Size = UDim2.new(0.5, 0, 0, 14)
-            InfoText.Position = UDim2.new(0, 10, 0, 18)
+            InfoText.Size = UDim2.new(0.65, 0, 0, 14)
+            InfoText.Position = UDim2.new(0, 10, 0, 21)
             InfoText.BackgroundTransparency = 1
-            InfoText.Text = truncate(user.current_game or "Game", 14) .. " / " .. truncate(user.executor or "Exec", 10)
+            InfoText.Text = truncate(user.current_game or "Roblox Experience", 16) .. "  •  " .. truncate(user.executor or "Exec", 10)
             InfoText.Font = Enum.Font.Gotham
             InfoText.TextSize = 9
-            InfoText.TextColor3 = Color3.fromRGB(90, 95, 110)
+            InfoText.TextColor3 = Color3.fromRGB(110, 115, 130)
             InfoText.TextXAlignment = Enum.TextXAlignment.Left
             InfoText.Parent = Item
 
-            if user.username ~= Username then
+            if uName ~= Username then
                 local Join = Instance.new("TextButton")
-                Join.Size = UDim2.new(0, 50, 0, 22)
-                Join.Position = UDim2.new(1, -58, 0.5, -11)
-                Join.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
+                Join.Size = UDim2.new(0, 52, 0, 22)
+                Join.Position = UDim2.new(1, -60, 0.5, -11)
+                Join.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
                 Join.Text = "JOIN"
-                Join.TextColor3 = Color3.fromRGB(180, 185, 200)
+                Join.TextColor3 = Color3.fromRGB(190, 195, 210)
                 Join.Font = Enum.Font.GothamBold
                 Join.TextSize = 9
                 Join.Parent = Item
                 Instance.new("UICorner", Join).CornerRadius = UDim.new(0, 4)
+                
                 Join.MouseButton1Click:Connect(function()
-                    TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+                    if user.place_id and user.job_id then
+                        TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+                    end
                 end)
 
                 local TargetBtn = Instance.new("TextButton")
                 TargetBtn.Size = UDim2.new(1, 0, 0, 24)
-                TargetBtn.BackgroundColor3 = (SelectedTarget == user.username) and Color3.fromRGB(38, 42, 54) or Color3.fromRGB(26, 28, 35)
-                TargetBtn.Text = truncate(user.username, 16)
+                TargetBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(40, 44, 56) or Color3.fromRGB(26, 28, 35)
+                TargetBtn.Text = truncate(uName, 16)
                 TargetBtn.TextColor3 = Color3.fromRGB(180, 184, 195)
                 TargetBtn.Font = Enum.Font.GothamMedium
                 TargetBtn.TextSize = 10
@@ -381,22 +413,22 @@ local function populateUserGrid(data)
                 Instance.new("UIPadding", TargetBtn).PaddingLeft = UDim.new(0, 6)
 
                 TargetBtn.MouseButton1Click:Connect(function()
-                    SelectedTarget = user.username
-                    SelectedTargetLabel.Text = "TARGET: " .. string.upper(user.username)
+                    SelectedTarget = uName
+                    SelectedTargetLabel.Text = "TARGET: " .. string.upper(uName)
                     for _, b in ipairs(TargetList:GetChildren()) do
                         if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(26, 28, 35) end
                     end
-                    TargetBtn.BackgroundColor3 = Color3.fromRGB(38, 42, 54)
+                    TargetBtn.BackgroundColor3 = Color3.fromRGB(40, 44, 56)
                 end)
             end
         end
     end
-    UsersFrame.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y)
-    TargetList.CanvasSize = UDim2.new(0, 0, 0, TargetLayout.AbsoluteContentSize.Y)
 end
 
 local function populateChat(records, adminGroup)
-    for _, child in ipairs(ChatScroll:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    for _, child in ipairs(ChatScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
     for _, msg in ipairs(records) do
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 18)
@@ -411,13 +443,11 @@ local function populateChat(records, adminGroup)
         Content.TextSize = 11
         Content.RichText = true
         
-        local tagColor = adminGroup[msg.username] and "rgb(235, 195, 75)" or "rgb(160, 165, 180)"
-        Content.Text = string.format("<font color='%s'>%s</font>: %s", tagColor, truncate(msg.username, 14), sanitizeText(msg.message))
+        local tagColor = adminGroup[msg.username] and "rgb(255, 215, 0)" or "rgb(160, 165, 180)"
+        Content.Text = string.format("<font color='%s'>%s</font>: %s", tagColor, truncate(msg.username or "Unknown", 14), sanitizeText(msg.message or ""))
         Content.TextColor3 = Color3.fromRGB(215, 218, 225)
         Content.Parent = Container
     end
-    ChatScroll.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y)
-    ChatScroll.CanvasPosition = Vector2.new(0, ChatScroll.CanvasSize.Y.Offset)
 end
 
 local function updatePresence()
@@ -438,7 +468,7 @@ local function updatePresence()
             place_id = PlaceId,
             current_game = gameName,
             executor = myExecutor,
-            updated_at = "now()"
+            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ")
         })
     })
 end
@@ -479,20 +509,19 @@ end
 
 local function fetchNetworkData()
     if not running then return end
-    local threshold = DateTime.fromUnixTimestamp(DateTime.now().UnixTimestamp - 25):ToIsoDate()
     
     local syncRes = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?updated_at=gt." .. threshold .. "&select=user_id,username,executor,is_admin,is_sub_admin,current_game,job_id,place_id",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
 
     local adminGroup = {}
-    if syncRes.StatusCode == 200 then
+    if syncRes and syncRes.StatusCode == 200 then
         local userlist = HttpService:JSONDecode(syncRes.Body)
         for _, u in ipairs(userlist) do
             if u.is_admin or u.is_sub_admin then adminGroup[u.username] = true end
-            if u.user_id == UserId then
+            if u.user_id == UserId or u.username == Username then
                 IsAdmin = u.is_admin or false
                 IsSubAdmin = u.is_sub_admin or false
                 TabPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
@@ -507,7 +536,7 @@ local function fetchNetworkData()
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
 
-    if cmdRes.StatusCode == 200 then
+    if cmdRes and cmdRes.StatusCode == 200 then
         local cmds = HttpService:JSONDecode(cmdRes.Body)
         for _, c in ipairs(cmds) do
             if not handledCommands[c.id] then
@@ -542,7 +571,7 @@ local function fetchNetworkData()
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
     
-    if chatRes.StatusCode == 200 then
+    if chatRes and chatRes.StatusCode == 200 then
         local logs = HttpService:JSONDecode(chatRes.Body)
         local ordered = {}
         for i = #logs, 1, -1 do table.insert(ordered, logs[i]) end
@@ -589,7 +618,7 @@ local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     MainArea.Visible = not minimized
-    Root.Size = minimized and UDim2.new(0, 600, 0, 36) or UDim2.new(0, 600, 0, 380)
+    Root.Size = minimized and UDim2.new(0, 620, 0, 36) or UDim2.new(0, 620, 0, 390)
 end)
 
 CloseBtn.MouseButton1Click:Connect(function()
