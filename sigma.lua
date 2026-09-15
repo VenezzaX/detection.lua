@@ -54,12 +54,27 @@ local function getExecutor()
 end
 local myExecutor = getExecutor()
 
-local function cleanUrlDecode(str)
-    str = string.gsub(str, "+", " ")
-    str = string.gsub(str, "%%(%x%x)", function(hex)
-        return string.char(tonumber(hex, 16))
-    end)
-    return str
+local function parseIsoToUnix(isoStr)
+    if not isoStr or type(isoStr) ~= "string" then return 0 end
+    local year, month, day, hour, min, sec = isoStr:match("(%d+)-(%d+)-(%d+)[T ](%d+):(%d+):(%d+)")
+    if year then
+        return os.time({
+            year = tonumber(year),
+            month = tonumber(month),
+            day = tonumber(day),
+            hour = tonumber(hour),
+            min = tonumber(min),
+            sec = tonumber(sec)
+        })
+    end
+    return 0
+end
+
+local function isUserOnline(isoStr)
+    local userTime = parseIsoToUnix(isoStr)
+    if userTime == 0 then return false end
+    local nowUtc = os.time(os.date("!*t"))
+    return math.abs(nowUtc - userTime) <= 35
 end
 
 local function sanitizeText(text)
@@ -146,7 +161,7 @@ UsersView.Size = UDim2.new(1, -20, 1, -20); UsersView.Position = UDim2.new(0, 10
 local UsersLayout = Instance.new("UIListLayout", UsersView); UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder; UsersLayout.Padding = UDim.new(0, 4)
 
 UsersLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    UsersView.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 10)
+    UsersView.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 12)
 end)
 
 local ChatView = Instance.new("Frame")
@@ -227,63 +242,146 @@ ChannelServerChat.MouseButton1Click:Connect(function() selectTab("server") end)
 ChannelGlobalChat.MouseButton1Click:Connect(function() selectTab("global") end)
 ChannelExecPanel.MouseButton1Click:Connect(function() selectTab("exec") end)
 
+local function createCategoryHeader(titleText, color)
+    local Header = Instance.new("Frame")
+    Header.Size = UDim2.new(1, -6, 0, 20)
+    Header.BackgroundTransparency = 1
+    Header.Parent = UsersView
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = string.upper(titleText)
+    Label.TextColor3 = color or Color3.fromRGB(148, 155, 164)
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 10
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Header
+end
+
+local function createUserRow(user, online)
+    local uName = tostring(user.username or "Unknown")
+    local PlayerRow = Instance.new("Frame")
+    PlayerRow.Size = UDim2.new(1, -6, 0, 45)
+    PlayerRow.BackgroundColor3 = online and Color3.fromRGB(43, 45, 49) or Color3.fromRGB(33, 34, 38)
+    PlayerRow.Parent = UsersView
+    Instance.new("UICorner", PlayerRow).CornerRadius = UDim.new(0, 4)
+
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Size = UDim2.new(0.5, -10, 0, 22)
+    NameLabel.Position = UDim2.new(0, 10, 0, 2)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.Font = Enum.Font.GothamSemibold
+    NameLabel.TextSize = 13
+    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local statusDot = online and "🟢 " or "⚪ "
+    if user.is_admin == true then 
+        NameLabel.TextColor3 = Color3.fromRGB(255, 235, 59)
+        NameLabel.Text = statusDot .. "👑 " .. uName
+    elseif user.is_sub_admin == true then 
+        NameLabel.TextColor3 = Color3.fromRGB(168, 85, 247)
+        NameLabel.Text = statusDot .. "🛡️ " .. uName
+    elseif uName == Username then 
+        NameLabel.TextColor3 = Color3.fromRGB(242, 243, 245)
+        NameLabel.Text = statusDot .. uName .. " (You)"
+    else 
+        NameLabel.TextColor3 = online and Color3.fromRGB(219, 222, 225) or Color3.fromRGB(120, 125, 134)
+        NameLabel.Text = statusDot .. uName
+    end
+    NameLabel.Parent = PlayerRow
+
+    local Subtitle = Instance.new("TextLabel")
+    Subtitle.Size = UDim2.new(0.55, 0, 0, 18)
+    Subtitle.Position = UDim2.new(0, 10, 0, 22)
+    Subtitle.BackgroundTransparency = 1
+    Subtitle.Font = Enum.Font.Gotham
+    Subtitle.TextSize = 10
+    Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    
+    if online then
+        Subtitle.Text = "🎮 " .. tostring(user.current_game or "Roblox") .. " | ⚙️ " .. tostring(user.executor or "Exec")
+        Subtitle.TextColor3 = Color3.fromRGB(110, 115, 122)
+    else
+        Subtitle.Text = "Last seen: " .. tostring(user.updated_at or "Unknown")
+        Subtitle.TextColor3 = Color3.fromRGB(80, 84, 92)
+    end
+    Subtitle.Parent = PlayerRow
+
+    if online and uName ~= Username then
+        local JoinBtn = Instance.new("TextButton")
+        JoinBtn.Size = UDim2.new(0, 65, 0, 26)
+        JoinBtn.Position = UDim2.new(1, -75, 0, 9)
+        JoinBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+        JoinBtn.Text = "Join Game"
+        JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        JoinBtn.Font = Enum.Font.GothamBold
+        JoinBtn.TextSize = 10
+        JoinBtn.Parent = PlayerRow
+        Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 4)
+        JoinBtn.MouseButton1Click:Connect(function() 
+            if user.place_id and user.job_id then
+                TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer) 
+            end
+        end)
+    end
+end
+
 local function refreshUIList(data)
     for _, child in ipairs(UsersView:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
     for _, child in ipairs(TargetScroller:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     
-    local uniquePool = {}
+    local onlineList = {}
+    local offlineList = {}
+    local seen = {}
+
     for _, user in ipairs(data) do
         local uName = tostring(user.username or "Unknown")
-        if not uniquePool[uName] then
-            uniquePool[uName] = true
-
-            local PlayerRow = Instance.new("Frame")
-            PlayerRow.Size = UDim2.new(1, -6, 0, 45); PlayerRow.BackgroundColor3 = Color3.fromRGB(43, 45, 49); PlayerRow.Parent = UsersView
-            Instance.new("UICorner", PlayerRow).CornerRadius = UDim.new(0, 4)
-
-            local NameLabel = Instance.new("TextLabel")
-            NameLabel.Size = UDim2.new(0.4, -10, 0, 22); NameLabel.Position = UDim2.new(0, 10, 0, 2); NameLabel.BackgroundTransparency = 1
-            NameLabel.Text = uName; NameLabel.Font = Enum.Font.GothamSemibold; NameLabel.TextSize = 13; NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-            
-            if user.is_admin == true then 
-                NameLabel.TextColor3 = Color3.fromRGB(255, 235, 59); NameLabel.Text = "👑 " .. uName
-            elseif user.is_sub_admin == true then 
-                NameLabel.TextColor3 = Color3.fromRGB(168, 85, 247); NameLabel.Text = "🛡️ " .. uName
-            elseif uName == Username then 
-                NameLabel.TextColor3 = Color3.fromRGB(242, 243, 245); NameLabel.Text = uName .. " (You)"
-            else 
-                NameLabel.TextColor3 = Color3.fromRGB(148, 155, 164) 
+        if not seen[uName] then
+            seen[uName] = true
+            if isUserOnline(user.updated_at) then
+                table.insert(onlineList, user)
+            else
+                table.insert(offlineList, user)
             end
-            NameLabel.Parent = PlayerRow
+        end
+    end
 
-            local Subtitle = Instance.new("TextLabel")
-            Subtitle.Size = UDim2.new(0.6, 0, 0, 18); Subtitle.Position = UDim2.new(0, 10, 0, 22); Subtitle.BackgroundTransparency = 1
-            Subtitle.Text = "🎮 " .. tostring(user.current_game or "Roblox") .. " | ⚙️ " .. tostring(user.executor or "Exec"); Subtitle.TextColor3 = Color3.fromRGB(110, 115, 122); Subtitle.Font = Enum.Font.Gotham; Subtitle.TextSize = 10; Subtitle.TextXAlignment = Enum.TextXAlignment.Left; Subtitle.Parent = PlayerRow
+    -- 1. Render Online Users
+    createCategoryHeader("Online — " .. #onlineList, Color3.fromRGB(35, 165, 90))
+    for _, user in ipairs(onlineList) do
+        createUserRow(user, true)
 
-            if uName ~= Username then
-                local JoinBtn = Instance.new("TextButton")
-                JoinBtn.Size = UDim2.new(0, 65, 0, 26); JoinBtn.Position = UDim2.new(1, -75, 0, 9); JoinBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90); JoinBtn.Text = "Join Game"; JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255); JoinBtn.Font = Enum.Font.GothamBold; JoinBtn.TextSize = 10; JoinBtn.Parent = PlayerRow
-                Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 4)
-                JoinBtn.MouseButton1Click:Connect(function() 
-                    if user.place_id and user.job_id then
-                        TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer) 
-                    end
-                end)
+        -- Add online players to executor target panel
+        local uName = tostring(user.username or "Unknown")
+        if uName ~= Username then
+            local TargetSelectorBtn = Instance.new("TextButton")
+            TargetSelectorBtn.Size = UDim2.new(1, -10, 0, 32)
+            TargetSelectorBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(53, 55, 60) or Color3.fromRGB(43, 45, 49)
+            TargetSelectorBtn.Text = "  🟢 " .. uName
+            TargetSelectorBtn.TextColor3 = Color3.fromRGB(219, 222, 225)
+            TargetSelectorBtn.Font = Enum.Font.GothamSemibold
+            TargetSelectorBtn.TextSize = 12
+            TargetSelectorBtn.TextXAlignment = Enum.TextXAlignment.Left
+            TargetSelectorBtn.Parent = TargetScroller
+            Instance.new("UICorner", TargetSelectorBtn).CornerRadius = UDim.new(0, 4)
 
-                local TargetSelectorBtn = Instance.new("TextButton")
-                TargetSelectorBtn.Size = UDim2.new(1, -10, 0, 32); TargetSelectorBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(53, 55, 60) or Color3.fromRGB(43, 45, 49)
-                TargetSelectorBtn.Text = "  " .. uName; TargetSelectorBtn.TextColor3 = Color3.fromRGB(219, 222, 225); TargetSelectorBtn.Font = Enum.Font.GothamSemibold; TargetSelectorBtn.TextSize = 12; TargetSelectorBtn.TextXAlignment = Enum.TextXAlignment.Left; TargetSelectorBtn.Parent = TargetScroller
-                Instance.new("UICorner", TargetSelectorBtn).CornerRadius = UDim.new(0, 4)
+            TargetSelectorBtn.MouseButton1Click:Connect(function()
+                SelectedTarget = uName
+                ActiveTargetTitle.Text = "Selected Target: " .. uName
+                for _, btn in ipairs(TargetScroller:GetChildren()) do
+                    if btn:IsA("TextButton") then btn.BackgroundColor3 = Color3.fromRGB(43, 45, 49) end
+                end
+                TargetSelectorBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+            end)
+        end
+    end
 
-                TargetSelectorBtn.MouseButton1Click:Connect(function()
-                    SelectedTarget = uName
-                    ActiveTargetTitle.Text = "Selected Target: " .. uName
-                    for _, btn in ipairs(TargetScroller:GetChildren()) do
-                        if btn:IsA("TextButton") then btn.BackgroundColor3 = Color3.fromRGB(43, 45, 49) end
-                    end
-                    TargetSelectorBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
-                end)
-            end
+    -- 2. Render Registered / Offline Users exclusively for Admin & SubAdmin
+    if (IsAdmin or IsSubAdmin) and #offlineList > 0 then
+        createCategoryHeader("Offline Registry (Admin History) — " .. #offlineList, Color3.fromRGB(110, 115, 122))
+        for _, user in ipairs(offlineList) do
+            createUserRow(user, false)
         end
     end
 end
@@ -308,7 +406,7 @@ end
 -- DATABASE OPERATIONS
 local function updatePresence()
     if not running then return end
-    local res = request({
+    request({
         Url = SUPABASE_URL .. "/rest/v1/executor_sync?on_conflict=username",
         Method = "POST",
         Headers = { 
@@ -324,14 +422,11 @@ local function updatePresence()
             place_id = PlaceId, 
             current_game = gameName, 
             executor = myExecutor, 
-            updated_at = "now()", 
+            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"), 
             teleport_target = _G.CurrentTpTarget, 
             active_effect = _G.CurrentActiveEffect 
         })
     })
-    if res and res.StatusCode > 299 then
-        warn("[Sync POST Failed]: HTTP", res.StatusCode, res.Body)
-    end
 end
 
 local function sendChatMessage(text)
@@ -354,9 +449,8 @@ end
 local function fetchData()
     if not running then return end
     
-    -- Removed restrictive time filter to prevent clock drift from dropping rows
     local resUser = request({
-        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=50",
+        Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=100",
         Method = "GET",
         Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
     })
@@ -375,12 +469,49 @@ local function fetchData()
                     ChannelExecPanel.Visible = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
                 end
             end
+            
             refreshUIList(users)
-        else
-            warn("[Sync Decode Failed]:", tostring(users))
+            
+            -- SAFE ROLE-BASED INTERCEPTOR
+            for _, user in ipairs(users) do
+                if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
+                    if tick() - lastTeleportTime > 5 then 
+                        if user.is_admin == true or user.is_sub_admin == true then
+                            lastTeleportTime = tick() 
+                            TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+                        end
+                    end
+                end
+
+                if user.active_effect and user.active_effect ~= "none" then
+                    local cmdData = string.split(user.active_effect, ":")
+                    local action = cmdData[1]
+                    local target = cmdData[2]
+                    local uniqueHash = cmdData[3] 
+
+                    if uniqueHash and not handledCommands[uniqueHash] then
+                        if user.is_admin == true or user.is_sub_admin == true then
+                            handledCommands[uniqueHash] = true 
+                            if action == "kill" or action == "explode" then
+                                if target == Username or target == "all" then 
+                                    runLocalExplosionEffect(Username)
+                                end
+                            elseif action == "teleport_to" and target == Username then
+                                for _, p in ipairs(Players:GetPlayers()) do
+                                    if p.Name == user.username and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                        local myChar = LocalPlayer.Character
+                                        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                                            myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
         end
-    else
-        warn("[Sync GET Failed]: HTTP", resUser and resUser.StatusCode, resUser and resUser.Body)
     end
 
     local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
