@@ -1,3 +1,28 @@
+if _G.ChatHub_Reloading then return end
+
+if _G.ChatHub_Loaded or _G.ChatHub_Running or _G.ChatHub_Cleanup then
+    _G.ChatHub_Reloading = true
+    pcall(function()
+        if _G.ChatHub_Cleanup then
+            _G.ChatHub_Cleanup()
+        end
+    end)
+    pcall(function()
+        local CoreGui = game:GetService("CoreGui")
+        local Players = game:GetService("Players")
+        local lp = Players.LocalPlayer
+        local old = CoreGui:FindFirstChild("ChatRoom") or (lp and lp:FindFirstChild("PlayerGui") and lp.PlayerGui:FindFirstChild("ChatRoom"))
+        if old then old:Destroy() end
+        local oldHud = CoreGui:FindFirstChild("SpectateHud") or (lp and lp:FindFirstChild("PlayerGui") and lp.PlayerGui:FindFirstChild("SpectateHud"))
+        if oldHud then oldHud:Destroy() end
+    end)
+    _G.ChatHub_Loaded = nil
+    _G.ChatHub_Running = nil
+    _G.ChatHub_Reloading = nil
+    print("[ChatHub] Existing session detected. Cleaned up and reloading...")
+end
+
+_G.ChatHub_Running = true
 
 local request = (http and http.request) or http_request or (syn and (syn.request or syn.request))
 if not request then
@@ -325,9 +350,11 @@ SpectateHud.BorderSizePixel = 0
 SpectateHud.Visible = false
 SpectateHud.Parent = ScreenGui
 Instance.new("UICorner", SpectateHud).CornerRadius = UDim.new(0, 8)
-local spectateStroke = Instance.new("UIStroke", SpectateHud)
-spectateStroke.Color = Color3.fromRGB(88, 101, 242)
-spectateStroke.Thickness = 1.5
+do
+    local s = Instance.new("UIStroke", SpectateHud)
+    s.Color = Color3.fromRGB(88, 101, 242)
+    s.Thickness = 1.5
+end
 
 local SpectateText = Instance.new("TextLabel")
 SpectateText.Size = UDim2.new(1, -75, 1, 0)
@@ -361,9 +388,23 @@ WindowFrame.BorderSizePixel = 0
 WindowFrame.Active = true
 WindowFrame.Parent = ScreenGui
 Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 10)
-local winStroke = Instance.new("UIStroke", WindowFrame)
-winStroke.Color = Color3.fromRGB(48, 50, 58)
-winStroke.Thickness = 1
+do
+    local s = Instance.new("UIStroke", WindowFrame)
+    s.Color = Color3.fromRGB(48, 50, 58)
+    s.Thickness = 1
+end
+
+local ResizeHandle = Instance.new("TextButton")
+ResizeHandle.Name = "ResizeHandle"
+ResizeHandle.Size = UDim2.new(0, 16, 0, 16)
+ResizeHandle.Position = UDim2.new(1, -16, 1, -16)
+ResizeHandle.BackgroundTransparency = 1
+ResizeHandle.Text = "◢"
+ResizeHandle.TextColor3 = Color3.fromRGB(120, 125, 134)
+ResizeHandle.Font = Enum.Font.GothamBold
+ResizeHandle.TextSize = 12
+ResizeHandle.ZIndex = 60
+ResizeHandle.Parent = WindowFrame
 
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
@@ -373,107 +414,111 @@ TitleBar.BorderSizePixel = 0
 TitleBar.Parent = WindowFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
 
-local TitleBarCover = Instance.new("Frame")
-TitleBarCover.Size = UDim2.new(1, 0, 0, 10)
-TitleBarCover.Position = UDim2.new(0, 0, 1, -10)
-TitleBarCover.BackgroundColor3 = Color3.fromRGB(22, 23, 27)
-TitleBarCover.BorderSizePixel = 0
-TitleBarCover.Parent = TitleBar
-
-local TitleIcon = Instance.new("TextLabel")
-TitleIcon.Size = UDim2.new(0, 24, 0, 24)
-TitleIcon.Position = UDim2.new(0, 12, 0, 7)
-TitleIcon.BackgroundTransparency = 1
-TitleIcon.Text = "💬"
-TitleIcon.TextSize = 16
-TitleIcon.Parent = TitleBar
-
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0, 100, 1, 0)
-TitleText.Position = UDim2.new(0, 40, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "Chat Room"
-TitleText.TextColor3 = Color3.fromRGB(242, 243, 245)
-TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 14
-TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.Parent = TitleBar
-
-local SubTitleText = Instance.new("TextLabel")
-SubTitleText.Size = UDim2.new(0, 140, 1, 0)
-SubTitleText.Position = UDim2.new(0, 138, 0, 0)
-SubTitleText.BackgroundTransparency = 1
-SubTitleText.Text = "• Cross-Game Network"
-SubTitleText.TextColor3 = Color3.fromRGB(148, 155, 164)
-SubTitleText.Font = Enum.Font.Gotham
-SubTitleText.TextSize = 11
-SubTitleText.TextXAlignment = Enum.TextXAlignment.Left
-SubTitleText.Parent = TitleBar
-
-local OnlineCounterPill = Instance.new("Frame")
-OnlineCounterPill.Size = UDim2.new(0, 140, 0, 22)
-OnlineCounterPill.Position = UDim2.new(0, 290, 0, 8)
-OnlineCounterPill.BackgroundColor3 = Color3.fromRGB(33, 35, 40)
-OnlineCounterPill.BorderSizePixel = 0
-OnlineCounterPill.Parent = TitleBar
-Instance.new("UICorner", OnlineCounterPill).CornerRadius = UDim.new(0, 11)
-
 local OnlineCounterText = Instance.new("TextLabel")
-OnlineCounterText.Size = UDim2.new(1, 0, 1, 0)
-OnlineCounterText.BackgroundTransparency = 1
-OnlineCounterText.Text = "🟢 0 Online"
-OnlineCounterText.TextColor3 = Color3.fromRGB(53, 219, 131)
-OnlineCounterText.Font = Enum.Font.GothamBold
-OnlineCounterText.TextSize = 11
-OnlineCounterText.Parent = OnlineCounterPill
+do
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(1, 0, 0, 10)
+    c.Position = UDim2.new(0, 0, 1, -10)
+    c.BackgroundColor3 = Color3.fromRGB(22, 23, 27)
+    c.BorderSizePixel = 0
+    c.Parent = TitleBar
 
-local Controls = Instance.new("Frame")
-Controls.Size = UDim2.new(0, 110, 1, 0)
-Controls.Position = UDim2.new(1, -115, 0, 0)
-Controls.BackgroundTransparency = 1
-Controls.Parent = TitleBar
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 24, 0, 24)
+    icon.Position = UDim2.new(0, 12, 0, 7)
+    icon.BackgroundTransparency = 1
+    icon.Text = "💬"
+    icon.TextSize = 16
+    icon.Parent = TitleBar
+
+    local tt = Instance.new("TextLabel")
+    tt.Size = UDim2.new(0, 100, 1, 0)
+    tt.Position = UDim2.new(0, 40, 0, 0)
+    tt.BackgroundTransparency = 1
+    tt.Text = "Chat Room"
+    tt.TextColor3 = Color3.fromRGB(242, 243, 245)
+    tt.Font = Enum.Font.GothamBold
+    tt.TextSize = 14
+    tt.TextXAlignment = Enum.TextXAlignment.Left
+    tt.Parent = TitleBar
+
+    local st = Instance.new("TextLabel")
+    st.Size = UDim2.new(0, 140, 1, 0)
+    st.Position = UDim2.new(0, 138, 0, 0)
+    st.BackgroundTransparency = 1
+    st.Text = "• Cross-Game Network"
+    st.TextColor3 = Color3.fromRGB(148, 155, 164)
+    st.Font = Enum.Font.Gotham
+    st.TextSize = 11
+    st.TextXAlignment = Enum.TextXAlignment.Left
+    st.Parent = TitleBar
+
+    local pill = Instance.new("Frame")
+    pill.Size = UDim2.new(0, 140, 0, 22)
+    pill.Position = UDim2.new(0, 290, 0, 8)
+    pill.BackgroundColor3 = Color3.fromRGB(33, 35, 40)
+    pill.BorderSizePixel = 0
+    pill.Parent = TitleBar
+    Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 11)
+
+    OnlineCounterText.Size = UDim2.new(1, 0, 1, 0)
+    OnlineCounterText.BackgroundTransparency = 1
+    OnlineCounterText.Text = "🟢 0 Online"
+    OnlineCounterText.TextColor3 = Color3.fromRGB(53, 219, 131)
+    OnlineCounterText.Font = Enum.Font.GothamBold
+    OnlineCounterText.TextSize = 11
+    OnlineCounterText.Parent = pill
+end
 
 local SoundBtn = Instance.new("TextButton")
-SoundBtn.Size = UDim2.new(0, 30, 0, 30)
-SoundBtn.Position = UDim2.new(0, 0, 0, 4)
-SoundBtn.BackgroundTransparency = 1
-SoundBtn.Text = "🔊"
-SoundBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-SoundBtn.Font = Enum.Font.GothamBold
-SoundBtn.TextSize = 14
-SoundBtn.Parent = Controls
-
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(0, 36, 0, 4)
-MinBtn.BackgroundTransparency = 1
-MinBtn.Text = "-"
-MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 14
-MinBtn.Parent = Controls
-Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
-
-MinBtn.MouseEnter:Connect(function()
-    MinBtn.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
-    MinBtn.BackgroundTransparency = 0
-    MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-end)
-MinBtn.MouseLeave:Connect(function()
-    MinBtn.BackgroundTransparency = 1
-    MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-end)
-
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(0, 72, 0, 4)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
-CloseBtn.Parent = Controls
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+do
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(0, 110, 1, 0)
+    c.Position = UDim2.new(1, -115, 0, 0)
+    c.BackgroundTransparency = 1
+    c.Parent = TitleBar
+
+    SoundBtn.Size = UDim2.new(0, 30, 0, 30)
+    SoundBtn.Position = UDim2.new(0, 0, 0, 4)
+    SoundBtn.BackgroundTransparency = 1
+    SoundBtn.Text = "🔊"
+    SoundBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    SoundBtn.Font = Enum.Font.GothamBold
+    SoundBtn.TextSize = 14
+    SoundBtn.Parent = c
+
+    MinBtn.Size = UDim2.new(0, 30, 0, 30)
+    MinBtn.Position = UDim2.new(0, 36, 0, 4)
+    MinBtn.BackgroundTransparency = 1
+    MinBtn.Text = "-"
+    MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.TextSize = 14
+    MinBtn.Parent = c
+    Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+
+    MinBtn.MouseEnter:Connect(function()
+        MinBtn.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+        MinBtn.BackgroundTransparency = 0
+        MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+    MinBtn.MouseLeave:Connect(function()
+        MinBtn.BackgroundTransparency = 1
+        MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    end)
+
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+    CloseBtn.Position = UDim2.new(0, 72, 0, 4)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 14
+    CloseBtn.Parent = c
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+end
 
 CloseBtn.MouseEnter:Connect(function()
     CloseBtn.BackgroundColor3 = Color3.fromRGB(237, 66, 69)
@@ -506,9 +551,11 @@ ToastLabel.Visible = false
 ToastLabel.ZIndex = 100
 ToastLabel.Parent = WindowFrame
 Instance.new("UICorner", ToastLabel).CornerRadius = UDim.new(0, 6)
-local toastStroke = Instance.new("UIStroke", ToastLabel)
-toastStroke.Color = Color3.fromRGB(60, 63, 72)
-toastStroke.Thickness = 1
+do
+    local s = Instance.new("UIStroke", ToastLabel)
+    s.Color = Color3.fromRGB(60, 63, 72)
+    s.Thickness = 1
+end
 
 local function showToast(message, color)
     task.spawn(function()
@@ -534,16 +581,18 @@ Sidebar.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = BodyFrame
 
-local CatCommunity = Instance.new("TextLabel")
-CatCommunity.Size = UDim2.new(1, -24, 0, 18)
-CatCommunity.Position = UDim2.new(0, 12, 0, 10)
-CatCommunity.BackgroundTransparency = 1
-CatCommunity.Text = "COMMUNITY"
-CatCommunity.TextColor3 = Color3.fromRGB(120, 125, 134)
-CatCommunity.Font = Enum.Font.GothamBold
-CatCommunity.TextSize = 10
-CatCommunity.TextXAlignment = Enum.TextXAlignment.Left
-CatCommunity.Parent = Sidebar
+do
+    local c = Instance.new("TextLabel")
+    c.Size = UDim2.new(1, -24, 0, 18)
+    c.Position = UDim2.new(0, 12, 0, 10)
+    c.BackgroundTransparency = 1
+    c.Text = "COMMUNITY"
+    c.TextColor3 = Color3.fromRGB(120, 125, 134)
+    c.Font = Enum.Font.GothamBold
+    c.TextSize = 10
+    c.TextXAlignment = Enum.TextXAlignment.Left
+    c.Parent = Sidebar
+end
 
 local ChannelUsers = Instance.new("TextButton")
 ChannelUsers.Size = UDim2.new(1, -16, 0, 32)
@@ -618,81 +667,83 @@ ChannelExecPanel.Visible = false
 ChannelExecPanel.Parent = Sidebar
 Instance.new("UICorner", ChannelExecPanel).CornerRadius = UDim.new(0, 5)
 
-local UserBottomBar = Instance.new("Frame")
-UserBottomBar.Size = UDim2.new(1, 0, 0, 52)
-UserBottomBar.Position = UDim2.new(0, 0, 1, -52)
-UserBottomBar.BackgroundColor3 = Color3.fromRGB(18, 19, 21)
-UserBottomBar.BorderSizePixel = 0
-UserBottomBar.Parent = Sidebar
+do
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, 0, 0, 52)
+    bar.Position = UDim2.new(0, 0, 1, -52)
+    bar.BackgroundColor3 = Color3.fromRGB(18, 19, 21)
+    bar.BorderSizePixel = 0
+    bar.Parent = Sidebar
 
-local MyAvatarImg = Instance.new("ImageLabel")
-MyAvatarImg.Size = UDim2.new(0, 34, 0, 34)
-MyAvatarImg.Position = UDim2.new(0, 10, 0, 9)
-MyAvatarImg.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-MyAvatarImg.BorderSizePixel = 0
-MyAvatarImg.Image = getAvatarThumb(UserId, Username)
-MyAvatarImg.Parent = UserBottomBar
-Instance.new("UICorner", MyAvatarImg).CornerRadius = UDim.new(1, 0)
+    local av = Instance.new("ImageLabel")
+    av.Size = UDim2.new(0, 34, 0, 34)
+    av.Position = UDim2.new(0, 10, 0, 9)
+    av.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    av.BorderSizePixel = 0
+    av.Image = getAvatarThumb(UserId, Username)
+    av.Parent = bar
+    Instance.new("UICorner", av).CornerRadius = UDim.new(1, 0)
 
-local MyStatusDot = Instance.new("Frame")
-MyStatusDot.Size = UDim2.new(0, 10, 0, 10)
-MyStatusDot.Position = UDim2.new(1, -9, 1, -9)
-MyStatusDot.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
-MyStatusDot.BorderSizePixel = 0
-MyStatusDot.Parent = MyAvatarImg
-Instance.new("UICorner", MyStatusDot).CornerRadius = UDim.new(1, 0)
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 10, 0, 10)
+    dot.Position = UDim2.new(1, -9, 1, -9)
+    dot.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    dot.BorderSizePixel = 0
+    dot.Parent = av
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
-local MyNameContainer = Instance.new("Frame")
-MyNameContainer.Size = UDim2.new(1, -56, 0, 18)
-MyNameContainer.Position = UDim2.new(0, 50, 0, 8)
-MyNameContainer.BackgroundTransparency = 1
-MyNameContainer.Parent = UserBottomBar
+    local nameBox = Instance.new("Frame")
+    nameBox.Size = UDim2.new(1, -56, 0, 18)
+    nameBox.Position = UDim2.new(0, 50, 0, 8)
+    nameBox.BackgroundTransparency = 1
+    nameBox.Parent = bar
 
-local MyNameLayout = Instance.new("UIListLayout", MyNameContainer)
-MyNameLayout.FillDirection = Enum.FillDirection.Horizontal
-MyNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-MyNameLayout.Padding = UDim.new(0, 5)
+    local layout = Instance.new("UIListLayout", nameBox)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0, 5)
 
-local MyNameLabel = Instance.new("TextLabel")
-MyNameLabel.Size = UDim2.new(0, 0, 1, 0)
-MyNameLabel.AutomaticSize = Enum.AutomaticSize.X
-MyNameLabel.BackgroundTransparency = 1
-MyNameLabel.Text = Username
-MyNameLabel.TextColor3 = Color3.fromRGB(242, 243, 245)
-MyNameLabel.Font = Enum.Font.GothamBold
-MyNameLabel.TextSize = 12
-MyNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-MyNameLabel.Parent = MyNameContainer
+    local nl = Instance.new("TextLabel")
+    nl.Size = UDim2.new(0, 0, 1, 0)
+    nl.AutomaticSize = Enum.AutomaticSize.X
+    nl.BackgroundTransparency = 1
+    nl.Text = Username
+    nl.TextColor3 = Color3.fromRGB(242, 243, 245)
+    nl.Font = Enum.Font.GothamBold
+    nl.TextSize = 12
+    nl.TextXAlignment = Enum.TextXAlignment.Left
+    nl.Parent = nameBox
 
-local MyExecBadge = Instance.new("Frame")
-MyExecBadge.Size = UDim2.new(0, 0, 0, 16)
-MyExecBadge.AutomaticSize = Enum.AutomaticSize.X
-MyExecBadge.BackgroundColor3 = getExecutorBadgeColor(myExecutor)
-MyExecBadge.BorderSizePixel = 0
-MyExecBadge.Parent = MyNameContainer
-Instance.new("UICorner", MyExecBadge).CornerRadius = UDim.new(0, 4)
+    local badge = Instance.new("Frame")
+    badge.Size = UDim2.new(0, 0, 0, 16)
+    badge.AutomaticSize = Enum.AutomaticSize.X
+    badge.BackgroundColor3 = getExecutorBadgeColor(myExecutor)
+    badge.BorderSizePixel = 0
+    badge.Parent = nameBox
+    Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 4)
 
-local MyExecText = Instance.new("TextLabel")
-MyExecText.Size = UDim2.new(0, 0, 1, 0)
-MyExecText.AutomaticSize = Enum.AutomaticSize.X
-MyExecText.BackgroundTransparency = 1
-MyExecText.Font = Enum.Font.GothamBold
-MyExecText.TextSize = 9
-MyExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
-MyExecText.Text = " ⚙️ " .. myExecutor .. " "
-MyExecText.Parent = MyExecBadge
+    local badgeTxt = Instance.new("TextLabel")
+    badgeTxt.Size = UDim2.new(0, 0, 1, 0)
+    badgeTxt.AutomaticSize = Enum.AutomaticSize.X
+    badgeTxt.BackgroundTransparency = 1
+    badgeTxt.Font = Enum.Font.GothamBold
+    badgeTxt.TextSize = 9
+    badgeTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    badgeTxt.Text = " ⚙️ " .. myExecutor .. " "
+    badgeTxt.Parent = badge
 
-local MySubLabel = Instance.new("TextLabel")
-MySubLabel.Size = UDim2.new(1, -56, 0, 16)
-MySubLabel.Position = UDim2.new(0, 50, 0, 27)
-MySubLabel.BackgroundTransparency = 1
-MySubLabel.Text = "🟢 Online • Roblox Game"
-MySubLabel.TextColor3 = Color3.fromRGB(148, 155, 164)
-MySubLabel.Font = Enum.Font.Gotham
-MySubLabel.TextSize = 10
-MySubLabel.TextXAlignment = Enum.TextXAlignment.Left
-MySubLabel.TextTruncate = Enum.TextTruncate.AtEnd
-MySubLabel.Parent = UserBottomBar
+    local sub = Instance.new("TextLabel")
+    sub.Size = UDim2.new(1, -56, 0, 16)
+    sub.Position = UDim2.new(0, 50, 0, 27)
+    sub.BackgroundTransparency = 1
+    sub.Text = "🟢 Online • Roblox Game"
+    sub.TextColor3 = Color3.fromRGB(148, 155, 164)
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 10
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.TextTruncate = Enum.TextTruncate.AtEnd
+    sub.Parent = bar
+end
 
 local ViewContainer = Instance.new("Frame")
 ViewContainer.Size = UDim2.new(1, -205, 1, 0)
@@ -706,46 +757,48 @@ UsersView.Position = UDim2.new(0, 10, 0, 8)
 UsersView.BackgroundTransparency = 1
 UsersView.Parent = ViewContainer
 
-local SearchContainer = Instance.new("Frame")
-SearchContainer.Size = UDim2.new(1, 0, 0, 32)
-SearchContainer.BackgroundColor3 = Color3.fromRGB(22, 23, 26)
-SearchContainer.BorderSizePixel = 0
-SearchContainer.Parent = UsersView
-Instance.new("UICorner", SearchContainer).CornerRadius = UDim.new(0, 6)
-local searchStroke = Instance.new("UIStroke", SearchContainer)
-searchStroke.Color = Color3.fromRGB(48, 50, 56)
-searchStroke.Thickness = 1
-
-local SearchIcon = Instance.new("TextLabel")
-SearchIcon.Size = UDim2.new(0, 28, 1, 0)
-SearchIcon.BackgroundTransparency = 1
-SearchIcon.Text = "🔍"
-SearchIcon.TextSize = 12
-SearchIcon.Parent = SearchContainer
-
 local SearchBox = Instance.new("TextBox")
-SearchBox.Size = UDim2.new(1, -62, 1, 0)
-SearchBox.Position = UDim2.new(0, 30, 0, 0)
-SearchBox.BackgroundTransparency = 1
-SearchBox.PlaceholderText = "Search network users or games in real-time..."
-SearchBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
-SearchBox.TextColor3 = Color3.fromRGB(242, 243, 245)
-SearchBox.Font = Enum.Font.Gotham
-SearchBox.TextSize = 12
-SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-SearchBox.ClearTextOnFocus = true
-SearchBox.Text = ""
-SearchBox.Parent = SearchContainer
-
 local SearchClearBtn = Instance.new("TextButton")
-SearchClearBtn.Size = UDim2.new(0, 24, 0, 24)
-SearchClearBtn.Position = UDim2.new(1, -28, 0.5, -12)
-SearchClearBtn.BackgroundTransparency = 1
-SearchClearBtn.Text = "X"
-SearchClearBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
-SearchClearBtn.Font = Enum.Font.GothamBold
-SearchClearBtn.TextSize = 12
-SearchClearBtn.Parent = SearchContainer
+do
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(1, 0, 0, 32)
+    c.BackgroundColor3 = Color3.fromRGB(22, 23, 26)
+    c.BorderSizePixel = 0
+    c.Parent = UsersView
+    Instance.new("UICorner", c).CornerRadius = UDim.new(0, 6)
+    local s = Instance.new("UIStroke", c)
+    s.Color = Color3.fromRGB(48, 50, 56)
+    s.Thickness = 1
+
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 28, 1, 0)
+    icon.BackgroundTransparency = 1
+    icon.Text = "🔍"
+    icon.TextSize = 12
+    icon.Parent = c
+
+    SearchBox.Size = UDim2.new(1, -62, 1, 0)
+    SearchBox.Position = UDim2.new(0, 30, 0, 0)
+    SearchBox.BackgroundTransparency = 1
+    SearchBox.PlaceholderText = "Search network users or games in real-time..."
+    SearchBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
+    SearchBox.TextColor3 = Color3.fromRGB(242, 243, 245)
+    SearchBox.Font = Enum.Font.Gotham
+    SearchBox.TextSize = 12
+    SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+    SearchBox.ClearTextOnFocus = true
+    SearchBox.Text = ""
+    SearchBox.Parent = c
+
+    SearchClearBtn.Size = UDim2.new(0, 24, 0, 24)
+    SearchClearBtn.Position = UDim2.new(1, -28, 0.5, -12)
+    SearchClearBtn.BackgroundTransparency = 1
+    SearchClearBtn.Text = "X"
+    SearchClearBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
+    SearchClearBtn.Font = Enum.Font.GothamBold
+    SearchClearBtn.TextSize = 12
+    SearchClearBtn.Parent = c
+end
 
 local UsersScroller = Instance.new("ScrollingFrame")
 UsersScroller.Size = UDim2.new(1, 0, 1, -40)
@@ -755,13 +808,14 @@ UsersScroller.BorderSizePixel = 0
 UsersScroller.ScrollBarThickness = 4
 UsersScroller.Parent = UsersView
 
-local UsersLayout = Instance.new("UIListLayout", UsersScroller)
-UsersLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UsersLayout.Padding = UDim.new(0, 4)
-
-UsersLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    UsersScroller.CanvasSize = UDim2.new(0, 0, 0, UsersLayout.AbsoluteContentSize.Y + 14)
-end)
+do
+    local layout = Instance.new("UIListLayout", UsersScroller)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 4)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        UsersScroller.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 14)
+    end)
+end
 
 local ChatView = Instance.new("Frame")
 ChatView.Size = UDim2.new(1, -20, 1, -16)
@@ -770,31 +824,33 @@ ChatView.BackgroundTransparency = 1
 ChatView.Visible = false
 ChatView.Parent = ViewContainer
 
-local ChatHeader = Instance.new("Frame")
-ChatHeader.Size = UDim2.new(1, 0, 0, 28)
-ChatHeader.BackgroundTransparency = 1
-ChatHeader.Parent = ChatView
-
 local ChatChannelTitle = Instance.new("TextLabel")
-ChatChannelTitle.Size = UDim2.new(0.5, 0, 1, 0)
-ChatChannelTitle.BackgroundTransparency = 1
-ChatChannelTitle.Text = "💬 # global-cross-chat"
-ChatChannelTitle.TextColor3 = Color3.fromRGB(242, 243, 245)
-ChatChannelTitle.Font = Enum.Font.GothamBold
-ChatChannelTitle.TextSize = 13
-ChatChannelTitle.TextXAlignment = Enum.TextXAlignment.Left
-ChatChannelTitle.Parent = ChatHeader
-
 local ChatChannelDesc = Instance.new("TextLabel")
-ChatChannelDesc.Size = UDim2.new(0.5, 0, 1, 0)
-ChatChannelDesc.Position = UDim2.new(0.5, 0, 0, 0)
-ChatChannelDesc.BackgroundTransparency = 1
-ChatChannelDesc.Text = "Cross-game network communication"
-ChatChannelDesc.TextColor3 = Color3.fromRGB(120, 125, 134)
-ChatChannelDesc.Font = Enum.Font.Gotham
-ChatChannelDesc.TextSize = 11
-ChatChannelDesc.TextXAlignment = Enum.TextXAlignment.Right
-ChatChannelDesc.Parent = ChatHeader
+do
+    local h = Instance.new("Frame")
+    h.Size = UDim2.new(1, 0, 0, 28)
+    h.BackgroundTransparency = 1
+    h.Parent = ChatView
+
+    ChatChannelTitle.Size = UDim2.new(0.5, 0, 1, 0)
+    ChatChannelTitle.BackgroundTransparency = 1
+    ChatChannelTitle.Text = "💬 # global-cross-chat"
+    ChatChannelTitle.TextColor3 = Color3.fromRGB(242, 243, 245)
+    ChatChannelTitle.Font = Enum.Font.GothamBold
+    ChatChannelTitle.TextSize = 13
+    ChatChannelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ChatChannelTitle.Parent = h
+
+    ChatChannelDesc.Size = UDim2.new(0.5, 0, 1, 0)
+    ChatChannelDesc.Position = UDim2.new(0.5, 0, 0, 0)
+    ChatChannelDesc.BackgroundTransparency = 1
+    ChatChannelDesc.Text = "Cross-game network communication"
+    ChatChannelDesc.TextColor3 = Color3.fromRGB(120, 125, 134)
+    ChatChannelDesc.Font = Enum.Font.Gotham
+    ChatChannelDesc.TextSize = 11
+    ChatChannelDesc.TextXAlignment = Enum.TextXAlignment.Right
+    ChatChannelDesc.Parent = h
+end
 
 local ChatScrolling = Instance.new("ScrollingFrame")
 ChatScrolling.Size = UDim2.new(1, 0, 1, -95)
@@ -804,75 +860,78 @@ ChatScrolling.BorderSizePixel = 0
 ChatScrolling.ScrollBarThickness = 4
 ChatScrolling.Parent = ChatView
 
-local ChatLayout = Instance.new("UIListLayout", ChatScrolling)
-ChatLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ChatLayout.Padding = UDim.new(0, 4)
-
-ChatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y + 8)
-    ChatScrolling.CanvasPosition = Vector2.new(0, math.max(0, ChatScrolling.CanvasSize.Y.Offset - ChatScrolling.AbsoluteSize.Y))
-end)
-
-local EmojiBar = Instance.new("ScrollingFrame")
-EmojiBar.Size = UDim2.new(1, 0, 0, 24)
-EmojiBar.Position = UDim2.new(0, 0, 1, -62)
-EmojiBar.BackgroundTransparency = 1
-EmojiBar.BorderSizePixel = 0
-EmojiBar.ScrollBarThickness = 0
-EmojiBar.CanvasSize = UDim2.new(0, 440, 0, 0)
-EmojiBar.ScrollingDirection = Enum.ScrollingDirection.X
-EmojiBar.Parent = ChatView
-
-local EmojiLayout = Instance.new("UIListLayout", EmojiBar)
-EmojiLayout.FillDirection = Enum.FillDirection.Horizontal
-EmojiLayout.SortOrder = Enum.SortOrder.LayoutOrder
-EmojiLayout.Padding = UDim.new(0, 4)
-
-local InputContainer = Instance.new("Frame")
-InputContainer.Size = UDim2.new(1, 0, 0, 34)
-InputContainer.Position = UDim2.new(0, 0, 1, -34)
-InputContainer.BackgroundTransparency = 1
-InputContainer.Parent = ChatView
+do
+    local layout = Instance.new("UIListLayout", ChatScrolling)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 4)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
+        ChatScrolling.CanvasPosition = Vector2.new(0, math.max(0, ChatScrolling.CanvasSize.Y.Offset - ChatScrolling.AbsoluteSize.Y))
+    end)
+end
 
 local TextBox = Instance.new("TextBox")
-TextBox.Size = UDim2.new(1, -44, 1, 0)
-TextBox.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
-TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
-TextBox.PlaceholderColor3 = Color3.fromRGB(148, 155, 164)
-TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
-TextBox.Font = Enum.Font.Gotham
-TextBox.TextSize = 13
-TextBox.TextXAlignment = Enum.TextXAlignment.Left
-TextBox.ClearTextOnFocus = true
-TextBox.Text = ""
-TextBox.Parent = InputContainer
-Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 10)
-Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
-
 local SendBtn = Instance.new("TextButton")
-SendBtn.Size = UDim2.new(0, 38, 1, 0)
-SendBtn.Position = UDim2.new(1, -38, 0, 0)
-SendBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-SendBtn.Text = "🚀"
-SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SendBtn.Font = Enum.Font.GothamBold
-SendBtn.TextSize = 13
-SendBtn.Parent = InputContainer
-Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 6)
+do
+    local bar = Instance.new("ScrollingFrame")
+    bar.Size = UDim2.new(1, 0, 0, 24)
+    bar.Position = UDim2.new(0, 0, 1, -62)
+    bar.BackgroundTransparency = 1
+    bar.BorderSizePixel = 0
+    bar.ScrollBarThickness = 0
+    bar.CanvasSize = UDim2.new(0, 440, 0, 0)
+    bar.ScrollingDirection = Enum.ScrollingDirection.X
+    bar.Parent = ChatView
 
-local quickEmojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
-for _, em in ipairs(quickEmojis) do
-    local emBtn = Instance.new("TextButton")
-    emBtn.Size = UDim2.new(0, 26, 0, 22)
-    emBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-    emBtn.Text = em
-    emBtn.TextSize = 12
-    emBtn.Parent = EmojiBar
-    Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
-    emBtn.MouseButton1Click:Connect(function()
-        TextBox.Text = TextBox.Text .. em .. " "
-        TextBox:CaptureFocus()
-    end)
+    local layout = Instance.new("UIListLayout", bar)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 4)
+
+    local inputC = Instance.new("Frame")
+    inputC.Size = UDim2.new(1, 0, 0, 34)
+    inputC.Position = UDim2.new(0, 0, 1, -34)
+    inputC.BackgroundTransparency = 1
+    inputC.Parent = ChatView
+
+    TextBox.Size = UDim2.new(1, -44, 1, 0)
+    TextBox.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+    TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
+    TextBox.PlaceholderColor3 = Color3.fromRGB(148, 155, 164)
+    TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
+    TextBox.Font = Enum.Font.Gotham
+    TextBox.TextSize = 13
+    TextBox.TextXAlignment = Enum.TextXAlignment.Left
+    TextBox.ClearTextOnFocus = true
+    TextBox.Text = ""
+    TextBox.Parent = inputC
+    Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 10)
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
+
+    SendBtn.Size = UDim2.new(0, 38, 1, 0)
+    SendBtn.Position = UDim2.new(1, -38, 0, 0)
+    SendBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    SendBtn.Text = "🚀"
+    SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SendBtn.Font = Enum.Font.GothamBold
+    SendBtn.TextSize = 13
+    SendBtn.Parent = inputC
+    Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 6)
+
+    local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
+    for _, em in ipairs(emojis) do
+        local emBtn = Instance.new("TextButton")
+        emBtn.Size = UDim2.new(0, 26, 0, 22)
+        emBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+        emBtn.Text = em
+        emBtn.TextSize = 12
+        emBtn.Parent = bar
+        Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
+        emBtn.MouseButton1Click:Connect(function()
+            TextBox.Text = TextBox.Text .. em .. " "
+            TextBox:CaptureFocus()
+        end)
+    end
 end
 
 local HistoryView = Instance.new("Frame")
@@ -883,98 +942,103 @@ HistoryView.BackgroundTransparency = 1
 HistoryView.Visible = false
 HistoryView.Parent = ViewContainer
 
-local HistoryHeader = Instance.new("Frame")
-HistoryHeader.Size = UDim2.new(1, 0, 0, 26)
-HistoryHeader.BackgroundTransparency = 1
-HistoryHeader.Parent = HistoryView
-
-local HistoryTitle = Instance.new("TextLabel")
-HistoryTitle.Size = UDim2.new(0.4, 0, 1, 0)
-HistoryTitle.BackgroundTransparency = 1
-HistoryTitle.Text = "📊 # executor-history"
-HistoryTitle.TextColor3 = Color3.fromRGB(242, 243, 245)
-HistoryTitle.Font = Enum.Font.GothamBold
-HistoryTitle.TextSize = 13
-HistoryTitle.TextXAlignment = Enum.TextXAlignment.Left
-HistoryTitle.Parent = HistoryHeader
-
-local HistorySubTabContainer = Instance.new("Frame")
-HistorySubTabContainer.Size = UDim2.new(0, 230, 0, 24)
-HistorySubTabContainer.Position = UDim2.new(1, -230, 0, 1)
-HistorySubTabContainer.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
-HistorySubTabContainer.BorderSizePixel = 0
-HistorySubTabContainer.Parent = HistoryHeader
-Instance.new("UICorner", HistorySubTabContainer).CornerRadius = UDim.new(0, 6)
-
 local TabLogBtn = Instance.new("TextButton")
-TabLogBtn.Size = UDim2.new(0.5, -2, 1, -4)
-TabLogBtn.Position = UDim2.new(0, 2, 0, 2)
-TabLogBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-TabLogBtn.Text = "📜 Audit Log"
-TabLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TabLogBtn.Font = Enum.Font.GothamBold
-TabLogBtn.TextSize = 10
-TabLogBtn.Parent = HistorySubTabContainer
-Instance.new("UICorner", TabLogBtn).CornerRadius = UDim.new(0, 4)
-
 local TabChartBtn = Instance.new("TextButton")
-TabChartBtn.Size = UDim2.new(0.5, -2, 1, -4)
-TabChartBtn.Position = UDim2.new(0.5, 0, 0, 2)
-TabChartBtn.BackgroundTransparency = 1
-TabChartBtn.Text = "📊 Analytics Chart"
-TabChartBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
-TabChartBtn.Font = Enum.Font.GothamBold
-TabChartBtn.TextSize = 10
-TabChartBtn.Parent = HistorySubTabContainer
-Instance.new("UICorner", TabChartBtn).CornerRadius = UDim.new(0, 4)
+do
+    local h = Instance.new("Frame")
+    h.Size = UDim2.new(1, 0, 0, 26)
+    h.BackgroundTransparency = 1
+    h.Parent = HistoryView
 
-local StatCardsFrame = Instance.new("Frame")
-StatCardsFrame.Size = UDim2.new(1, 0, 0, 52)
-StatCardsFrame.Position = UDim2.new(0, 0, 0, 28)
-StatCardsFrame.BackgroundTransparency = 1
-StatCardsFrame.Parent = HistoryView
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.4, 0, 1, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "📊 # executor-history"
+    title.TextColor3 = Color3.fromRGB(242, 243, 245)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 13
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = h
 
-local function createStatCard(title, posScale, sizeScale)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(sizeScale, -6, 1, 0)
-    card.Position = UDim2.new(posScale, 0, 0, 0)
-    card.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
-    card.BorderSizePixel = 0
-    card.Parent = StatCardsFrame
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
-    local cStroke = Instance.new("UIStroke", card)
-    cStroke.Color = Color3.fromRGB(48, 50, 56)
-    cStroke.Thickness = 1
+    local subTabs = Instance.new("Frame")
+    subTabs.Size = UDim2.new(0, 230, 0, 24)
+    subTabs.Position = UDim2.new(1, -230, 0, 1)
+    subTabs.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+    subTabs.BorderSizePixel = 0
+    subTabs.Parent = h
+    Instance.new("UICorner", subTabs).CornerRadius = UDim.new(0, 6)
 
-    local tLabel = Instance.new("TextLabel")
-    tLabel.Size = UDim2.new(1, -12, 0, 16)
-    tLabel.Position = UDim2.new(0, 8, 0, 6)
-    tLabel.BackgroundTransparency = 1
-    tLabel.Text = title
-    tLabel.TextColor3 = Color3.fromRGB(148, 155, 164)
-    tLabel.Font = Enum.Font.GothamBold
-    tLabel.TextSize = 9
-    tLabel.TextXAlignment = Enum.TextXAlignment.Left
-    tLabel.Parent = card
+    TabLogBtn.Size = UDim2.new(0.5, -2, 1, -4)
+    TabLogBtn.Position = UDim2.new(0, 2, 0, 2)
+    TabLogBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    TabLogBtn.Text = "📜 Audit Log"
+    TabLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabLogBtn.Font = Enum.Font.GothamBold
+    TabLogBtn.TextSize = 10
+    TabLogBtn.Parent = subTabs
+    Instance.new("UICorner", TabLogBtn).CornerRadius = UDim.new(0, 4)
 
-    local vLabel = Instance.new("TextLabel")
-    vLabel.Size = UDim2.new(1, -12, 0, 22)
-    vLabel.Position = UDim2.new(0, 8, 0, 22)
-    vLabel.BackgroundTransparency = 1
-    vLabel.Text = "0"
-    vLabel.TextColor3 = Color3.fromRGB(242, 243, 245)
-    vLabel.Font = Enum.Font.GothamBold
-    vLabel.TextSize = 13
-    vLabel.TextXAlignment = Enum.TextXAlignment.Left
-    vLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    vLabel.Parent = card
-
-    return vLabel
+    TabChartBtn.Size = UDim2.new(0.5, -2, 1, -4)
+    TabChartBtn.Position = UDim2.new(0.5, 0, 0, 2)
+    TabChartBtn.BackgroundTransparency = 1
+    TabChartBtn.Text = "📊 Analytics Chart"
+    TabChartBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
+    TabChartBtn.Font = Enum.Font.GothamBold
+    TabChartBtn.TextSize = 10
+    TabChartBtn.Parent = subTabs
+    Instance.new("UICorner", TabChartBtn).CornerRadius = UDim.new(0, 4)
 end
 
-local StatUsersVal = createStatCard("👥 UNIQUE USERS", 0, 0.33)
-local StatTopExecVal = createStatCard("⚡ TOP EXECUTOR", 0.335, 0.33)
-local StatGamesVal = createStatCard("🎮 ACTIVE GAMES", 0.67, 0.33)
+local StatUsersVal, StatTopExecVal, StatGamesVal
+do
+    local statFrame = Instance.new("Frame")
+    statFrame.Size = UDim2.new(1, 0, 0, 52)
+    statFrame.Position = UDim2.new(0, 0, 0, 28)
+    statFrame.BackgroundTransparency = 1
+    statFrame.Parent = HistoryView
+
+    local function createStatCard(title, posScale, sizeScale)
+        local card = Instance.new("Frame")
+        card.Size = UDim2.new(sizeScale, -6, 1, 0)
+        card.Position = UDim2.new(posScale, 0, 0, 0)
+        card.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+        card.BorderSizePixel = 0
+        card.Parent = statFrame
+        Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
+        local cStroke = Instance.new("UIStroke", card)
+        cStroke.Color = Color3.fromRGB(48, 50, 56)
+        cStroke.Thickness = 1
+
+        local tLabel = Instance.new("TextLabel")
+        tLabel.Size = UDim2.new(1, -12, 0, 16)
+        tLabel.Position = UDim2.new(0, 8, 0, 6)
+        tLabel.BackgroundTransparency = 1
+        tLabel.Text = title
+        tLabel.TextColor3 = Color3.fromRGB(148, 155, 164)
+        tLabel.Font = Enum.Font.GothamBold
+        tLabel.TextSize = 9
+        tLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tLabel.Parent = card
+
+        local vLabel = Instance.new("TextLabel")
+        vLabel.Size = UDim2.new(1, -12, 0, 22)
+        vLabel.Position = UDim2.new(0, 8, 0, 22)
+        vLabel.BackgroundTransparency = 1
+        vLabel.Text = "0"
+        vLabel.TextColor3 = Color3.fromRGB(242, 243, 245)
+        vLabel.Font = Enum.Font.GothamBold
+        vLabel.TextSize = 13
+        vLabel.TextXAlignment = Enum.TextXAlignment.Left
+        vLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        vLabel.Parent = card
+
+        return vLabel
+    end
+
+    StatUsersVal = createStatCard("👥 UNIQUE USERS", 0, 0.33)
+    StatTopExecVal = createStatCard("⚡ TOP EXECUTOR", 0.335, 0.33)
+    StatGamesVal = createStatCard("🎮 ACTIVE GAMES", 0.67, 0.33)
+end
 
 local FilterContainer = Instance.new("Frame")
 FilterContainer.Size = UDim2.new(1, 0, 0, 28)
@@ -982,70 +1046,72 @@ FilterContainer.Position = UDim2.new(0, 0, 0, 86)
 FilterContainer.BackgroundTransparency = 1
 FilterContainer.Parent = HistoryView
 
-local ScrollLeftBtn = Instance.new("TextButton")
-ScrollLeftBtn.Size = UDim2.new(0, 22, 1, 0)
-ScrollLeftBtn.Position = UDim2.new(0, 0, 0, 0)
-ScrollLeftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-ScrollLeftBtn.Text = "<"
-ScrollLeftBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
-ScrollLeftBtn.Font = Enum.Font.GothamBold
-ScrollLeftBtn.TextSize = 13
-ScrollLeftBtn.Parent = FilterContainer
-Instance.new("UICorner", ScrollLeftBtn).CornerRadius = UDim.new(0, 4)
-
-ScrollLeftBtn.MouseEnter:Connect(function()
-    ScrollLeftBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
-end)
-ScrollLeftBtn.MouseLeave:Connect(function()
-    ScrollLeftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-end)
-
 local HistoryFilterBar = Instance.new("ScrollingFrame")
-HistoryFilterBar.Size = UDim2.new(1, -52, 1, 0)
-HistoryFilterBar.Position = UDim2.new(0, 26, 0, 0)
-HistoryFilterBar.BackgroundTransparency = 1
-HistoryFilterBar.BorderSizePixel = 0
-HistoryFilterBar.ScrollBarThickness = 4
-HistoryFilterBar.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
-HistoryFilterBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-HistoryFilterBar.CanvasSize = UDim2.new(0, 0, 0, 0)
-HistoryFilterBar.ScrollingDirection = Enum.ScrollingDirection.X
-HistoryFilterBar.Parent = FilterContainer
+do
+    local leftBtn = Instance.new("TextButton")
+    leftBtn.Size = UDim2.new(0, 22, 1, 0)
+    leftBtn.Position = UDim2.new(0, 0, 0, 0)
+    leftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    leftBtn.Text = "<"
+    leftBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
+    leftBtn.Font = Enum.Font.GothamBold
+    leftBtn.TextSize = 13
+    leftBtn.Parent = FilterContainer
+    Instance.new("UICorner", leftBtn).CornerRadius = UDim.new(0, 4)
 
-local HistoryFilterLayout = Instance.new("UIListLayout", HistoryFilterBar)
-HistoryFilterLayout.FillDirection = Enum.FillDirection.Horizontal
-HistoryFilterLayout.SortOrder = Enum.SortOrder.LayoutOrder
-HistoryFilterLayout.Padding = UDim.new(0, 4)
+    leftBtn.MouseEnter:Connect(function()
+        leftBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+    end)
+    leftBtn.MouseLeave:Connect(function()
+        leftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    end)
 
-HistoryFilterLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    HistoryFilterBar.CanvasSize = UDim2.new(0, HistoryFilterLayout.AbsoluteContentSize.X + 20, 0, 0)
-end)
+    HistoryFilterBar.Size = UDim2.new(1, -52, 1, 0)
+    HistoryFilterBar.Position = UDim2.new(0, 26, 0, 0)
+    HistoryFilterBar.BackgroundTransparency = 1
+    HistoryFilterBar.BorderSizePixel = 0
+    HistoryFilterBar.ScrollBarThickness = 4
+    HistoryFilterBar.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
+    HistoryFilterBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+    HistoryFilterBar.CanvasSize = UDim2.new(0, 0, 0, 0)
+    HistoryFilterBar.ScrollingDirection = Enum.ScrollingDirection.X
+    HistoryFilterBar.Parent = FilterContainer
 
-local ScrollRightBtn = Instance.new("TextButton")
-ScrollRightBtn.Size = UDim2.new(0, 22, 1, 0)
-ScrollRightBtn.Position = UDim2.new(1, -22, 0, 0)
-ScrollRightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-ScrollRightBtn.Text = ">"
-ScrollRightBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
-ScrollRightBtn.Font = Enum.Font.GothamBold
-ScrollRightBtn.TextSize = 13
-ScrollRightBtn.Parent = FilterContainer
-Instance.new("UICorner", ScrollRightBtn).CornerRadius = UDim.new(0, 4)
+    local layout = Instance.new("UIListLayout", HistoryFilterBar)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 4)
 
-ScrollRightBtn.MouseEnter:Connect(function()
-    ScrollRightBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
-end)
-ScrollRightBtn.MouseLeave:Connect(function()
-    ScrollRightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-end)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        HistoryFilterBar.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.X + 20, 0, 0)
+    end)
 
-ScrollLeftBtn.MouseButton1Click:Connect(function()
-    HistoryFilterBar.CanvasPosition = Vector2.new(math.max(0, HistoryFilterBar.CanvasPosition.X - 140), 0)
-end)
+    local rightBtn = Instance.new("TextButton")
+    rightBtn.Size = UDim2.new(0, 22, 1, 0)
+    rightBtn.Position = UDim2.new(1, -22, 0, 0)
+    rightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    rightBtn.Text = ">"
+    rightBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
+    rightBtn.Font = Enum.Font.GothamBold
+    rightBtn.TextSize = 13
+    rightBtn.Parent = FilterContainer
+    Instance.new("UICorner", rightBtn).CornerRadius = UDim.new(0, 4)
 
-ScrollRightBtn.MouseButton1Click:Connect(function()
-    HistoryFilterBar.CanvasPosition = Vector2.new(HistoryFilterBar.CanvasPosition.X + 140, 0)
-end)
+    rightBtn.MouseEnter:Connect(function()
+        rightBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+    end)
+    rightBtn.MouseLeave:Connect(function()
+        rightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    end)
+
+    leftBtn.MouseButton1Click:Connect(function()
+        HistoryFilterBar.CanvasPosition = Vector2.new(math.max(0, HistoryFilterBar.CanvasPosition.X - 140), 0)
+    end)
+
+    rightBtn.MouseButton1Click:Connect(function()
+        HistoryFilterBar.CanvasPosition = Vector2.new(HistoryFilterBar.CanvasPosition.X + 140, 0)
+    end)
+end
 
 local HistoryScroller = Instance.new("ScrollingFrame")
 HistoryScroller.Size = UDim2.new(1, 0, 1, -120)
@@ -1055,13 +1121,15 @@ HistoryScroller.BorderSizePixel = 0
 HistoryScroller.ScrollBarThickness = 4
 HistoryScroller.Parent = HistoryView
 
-local HistoryLayout = Instance.new("UIListLayout", HistoryScroller)
-HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
-HistoryLayout.Padding = UDim.new(0, 4)
+do
+    local layout = Instance.new("UIListLayout", HistoryScroller)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 4)
 
-HistoryLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    HistoryScroller.CanvasSize = UDim2.new(0, 0, 0, HistoryLayout.AbsoluteContentSize.Y + 10)
-end)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        HistoryScroller.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+end
 
 local ChartScroller = Instance.new("ScrollingFrame")
 ChartScroller.Size = UDim2.new(1, 0, 1, -88)
@@ -1072,13 +1140,14 @@ ChartScroller.ScrollBarThickness = 4
 ChartScroller.Visible = false
 ChartScroller.Parent = HistoryView
 
-local ChartLayout = Instance.new("UIListLayout", ChartScroller)
-ChartLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ChartLayout.Padding = UDim.new(0, 8)
-
-ChartLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ChartScroller.CanvasSize = UDim2.new(0, 0, 0, ChartLayout.AbsoluteContentSize.Y + 20)
-end)
+do
+    local layout = Instance.new("UIListLayout", ChartScroller)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 8)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ChartScroller.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+    end)
+end
 
 local openUserProfile
 
@@ -1492,128 +1561,131 @@ TargetScroller.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
 TargetScroller.BorderSizePixel = 0
 TargetScroller.ScrollBarThickness = 4
 TargetScroller.Parent = ExecPanelFrame
-local TargetLayout = Instance.new("UIListLayout", TargetScroller)
-TargetLayout.Padding = UDim.new(0, 4)
-Instance.new("UICorner", TargetScroller).CornerRadius = UDim.new(0, 6)
-
-TargetLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    TargetScroller.CanvasSize = UDim2.new(0, 0, 0, TargetLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local ControlPanel = Instance.new("Frame")
-ControlPanel.Size = UDim2.new(1, -210, 1, 0)
-ControlPanel.Position = UDim2.new(0, 210, 0, 0)
-ControlPanel.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
-ControlPanel.BorderSizePixel = 0
-ControlPanel.Parent = ExecPanelFrame
-Instance.new("UICorner", ControlPanel).CornerRadius = UDim.new(0, 6)
-
-local TopActionFrame = Instance.new("Frame")
-TopActionFrame.Size = UDim2.new(1, 0, 0, 140)
-TopActionFrame.BackgroundTransparency = 1
-TopActionFrame.Parent = ControlPanel
+do
+    local layout = Instance.new("UIListLayout", TargetScroller)
+    layout.Padding = UDim.new(0, 4)
+    Instance.new("UICorner", TargetScroller).CornerRadius = UDim.new(0, 6)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TargetScroller.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+end
 
 local ActiveTargetTitle = Instance.new("TextLabel")
-ActiveTargetTitle.Size = UDim2.new(1, 0, 0, 25)
-ActiveTargetTitle.Position = UDim2.new(0, 10, 0, 5)
-ActiveTargetTitle.BackgroundTransparency = 1
-ActiveTargetTitle.Text = "Selected Target: none"
-ActiveTargetTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ActiveTargetTitle.Font = Enum.Font.GothamBold
-ActiveTargetTitle.TextSize = 13
-ActiveTargetTitle.TextXAlignment = Enum.TextXAlignment.Left
-ActiveTargetTitle.Parent = TopActionFrame
-
 local BringBtn = Instance.new("TextButton")
-BringBtn.Size = UDim2.new(0, 115, 0, 28)
-BringBtn.Position = UDim2.new(0, 10, 0, 35)
-BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-BringBtn.Text = "Bring User (Server)"
-BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BringBtn.Font = Enum.Font.GothamBold
-BringBtn.TextSize = 10
-BringBtn.Parent = TopActionFrame
-Instance.new("UICorner", BringBtn).CornerRadius = UDim.new(0, 4)
-
 local TeleportToMeBtn = Instance.new("TextButton")
-TeleportToMeBtn.Size = UDim2.new(1, -145, 0, 28)
-TeleportToMeBtn.Position = UDim2.new(0, 135, 0, 35)
-TeleportToMeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
-TeleportToMeBtn.Text = "Teleport User to Me"
-TeleportToMeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportToMeBtn.Font = Enum.Font.GothamBold
-TeleportToMeBtn.TextSize = 10
-TeleportToMeBtn.Parent = TopActionFrame
-Instance.new("UICorner", TeleportToMeBtn).CornerRadius = UDim.new(0, 4)
-
 local RemoteKillBtn = Instance.new("TextButton")
-RemoteKillBtn.Size = UDim2.new(0, 115, 0, 28)
-RemoteKillBtn.Position = UDim2.new(0, 10, 0, 70)
-RemoteKillBtn.BackgroundColor3 = Color3.fromRGB(242, 63, 67)
-RemoteKillBtn.Text = "Remote Kill"
-RemoteKillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RemoteKillBtn.Font = Enum.Font.GothamBold
-RemoteKillBtn.TextSize = 11
-RemoteKillBtn.Parent = TopActionFrame
-Instance.new("UICorner", RemoteKillBtn).CornerRadius = UDim.new(0, 4)
-
 local RemoteExplodeBtn = Instance.new("TextButton")
-RemoteExplodeBtn.Size = UDim2.new(1, -145, 0, 28)
-RemoteExplodeBtn.Position = UDim2.new(0, 135, 0, 70)
-RemoteExplodeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
-RemoteExplodeBtn.Text = "Remote Explode"
-RemoteExplodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RemoteExplodeBtn.Font = Enum.Font.GothamBold
-RemoteExplodeBtn.TextSize = 11
-RemoteExplodeBtn.Parent = TopActionFrame
-Instance.new("UICorner", RemoteExplodeBtn).CornerRadius = UDim.new(0, 4)
-
-local EnvironmentLabel = Instance.new("TextLabel")
-EnvironmentLabel.Size = UDim2.new(1, -20, 0, 20)
-EnvironmentLabel.Position = UDim2.new(0, 10, 0, 110)
-EnvironmentLabel.BackgroundTransparency = 1
-EnvironmentLabel.Text = "Remote Environment Executor"
-EnvironmentLabel.TextColor3 = Color3.fromRGB(181, 186, 193)
-EnvironmentLabel.Font = Enum.Font.GothamBold
-EnvironmentLabel.TextSize = 11
-EnvironmentLabel.TextXAlignment = Enum.TextXAlignment.Left
-EnvironmentLabel.Parent = TopActionFrame
-
-local CodeScrollingContainer = Instance.new("ScrollingFrame")
-CodeScrollingContainer.Size = UDim2.new(1, -20, 1, -185)
-CodeScrollingContainer.Position = UDim2.new(0, 10, 0, 135)
-CodeScrollingContainer.BackgroundColor3 = Color3.fromRGB(22, 23, 26)
-CodeScrollingContainer.BorderSizePixel = 0
-CodeScrollingContainer.ScrollBarThickness = 4
-CodeScrollingContainer.CanvasSize = UDim2.new(2, 0, 5, 0)
-CodeScrollingContainer.Parent = ControlPanel
-Instance.new("UICorner", CodeScrollingContainer).CornerRadius = UDim.new(0, 5)
-
 local CodeBox = Instance.new("TextBox")
-CodeBox.Size = UDim2.new(1, -10, 1, -10)
-CodeBox.Position = UDim2.new(0, 8, 0, 8)
-CodeBox.BackgroundTransparency = 1
-CodeBox.TextColor3 = Color3.fromRGB(168, 228, 125)
-CodeBox.Font = Enum.Font.Code
-CodeBox.TextSize = 12
-CodeBox.TextXAlignment = Enum.TextXAlignment.Left
-CodeBox.TextYAlignment = Enum.TextYAlignment.Top
-CodeBox.ClearTextOnFocus = false
-CodeBox.MultiLine = true
-CodeBox.PlaceholderText = "-- Type cross-game runtime script source here...\n-- Direct target environment configuration rules apply."
-CodeBox.Text = ""
-CodeBox.Parent = CodeScrollingContainer
-
 local RemoteExecuteCodeBtn = Instance.new("TextButton")
-RemoteExecuteCodeBtn.Size = UDim2.new(1, -20, 0, 32)
-RemoteExecuteCodeBtn.Position = UDim2.new(0, 10, 1, -40)
-RemoteExecuteCodeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
-RemoteExecuteCodeBtn.Text = "Deploy Cross-Game Execution String"
-RemoteExecuteCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RemoteExecuteCodeBtn.Font = Enum.Font.GothamBold
-RemoteExecuteCodeBtn.TextSize = 12
-RemoteExecuteCodeBtn.Parent = ControlPanel
-Instance.new("UICorner", RemoteExecuteCodeBtn).CornerRadius = UDim.new(0, 4)
+do
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(1, -210, 1, 0)
+    panel.Position = UDim2.new(0, 210, 0, 0)
+    panel.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    panel.BorderSizePixel = 0
+    panel.Parent = ExecPanelFrame
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 6)
+
+    local topAction = Instance.new("Frame")
+    topAction.Size = UDim2.new(1, 0, 0, 140)
+    topAction.BackgroundTransparency = 1
+    topAction.Parent = panel
+
+    ActiveTargetTitle.Size = UDim2.new(1, 0, 0, 25)
+    ActiveTargetTitle.Position = UDim2.new(0, 10, 0, 5)
+    ActiveTargetTitle.BackgroundTransparency = 1
+    ActiveTargetTitle.Text = "Selected Target: none"
+    ActiveTargetTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ActiveTargetTitle.Font = Enum.Font.GothamBold
+    ActiveTargetTitle.TextSize = 13
+    ActiveTargetTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ActiveTargetTitle.Parent = topAction
+
+    BringBtn.Size = UDim2.new(0, 115, 0, 28)
+    BringBtn.Position = UDim2.new(0, 10, 0, 35)
+    BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    BringBtn.Text = "Bring User (Server)"
+    BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BringBtn.Font = Enum.Font.GothamBold
+    BringBtn.TextSize = 10
+    BringBtn.Parent = topAction
+    Instance.new("UICorner", BringBtn).CornerRadius = UDim.new(0, 4)
+
+    TeleportToMeBtn.Size = UDim2.new(1, -145, 0, 28)
+    TeleportToMeBtn.Position = UDim2.new(0, 135, 0, 35)
+    TeleportToMeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    TeleportToMeBtn.Text = "Teleport User to Me"
+    TeleportToMeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TeleportToMeBtn.Font = Enum.Font.GothamBold
+    TeleportToMeBtn.TextSize = 10
+    TeleportToMeBtn.Parent = topAction
+    Instance.new("UICorner", TeleportToMeBtn).CornerRadius = UDim.new(0, 4)
+
+    RemoteKillBtn.Size = UDim2.new(0, 115, 0, 28)
+    RemoteKillBtn.Position = UDim2.new(0, 10, 0, 70)
+    RemoteKillBtn.BackgroundColor3 = Color3.fromRGB(242, 63, 67)
+    RemoteKillBtn.Text = "Remote Kill"
+    RemoteKillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RemoteKillBtn.Font = Enum.Font.GothamBold
+    RemoteKillBtn.TextSize = 11
+    RemoteKillBtn.Parent = topAction
+    Instance.new("UICorner", RemoteKillBtn).CornerRadius = UDim.new(0, 4)
+
+    RemoteExplodeBtn.Size = UDim2.new(1, -145, 0, 28)
+    RemoteExplodeBtn.Position = UDim2.new(0, 135, 0, 70)
+    RemoteExplodeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+    RemoteExplodeBtn.Text = "Remote Explode"
+    RemoteExplodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RemoteExplodeBtn.Font = Enum.Font.GothamBold
+    RemoteExplodeBtn.TextSize = 11
+    RemoteExplodeBtn.Parent = topAction
+    Instance.new("UICorner", RemoteExplodeBtn).CornerRadius = UDim.new(0, 4)
+
+    local envLbl = Instance.new("TextLabel")
+    envLbl.Size = UDim2.new(1, -20, 0, 20)
+    envLbl.Position = UDim2.new(0, 10, 0, 110)
+    envLbl.BackgroundTransparency = 1
+    envLbl.Text = "Remote Environment Executor"
+    envLbl.TextColor3 = Color3.fromRGB(181, 186, 193)
+    envLbl.Font = Enum.Font.GothamBold
+    envLbl.TextSize = 11
+    envLbl.TextXAlignment = Enum.TextXAlignment.Left
+    envLbl.Parent = topAction
+
+    local scroller = Instance.new("ScrollingFrame")
+    scroller.Size = UDim2.new(1, -20, 1, -185)
+    scroller.Position = UDim2.new(0, 10, 0, 135)
+    scroller.BackgroundColor3 = Color3.fromRGB(22, 23, 26)
+    scroller.BorderSizePixel = 0
+    scroller.ScrollBarThickness = 4
+    scroller.CanvasSize = UDim2.new(2, 0, 5, 0)
+    scroller.Parent = panel
+    Instance.new("UICorner", scroller).CornerRadius = UDim.new(0, 5)
+
+    CodeBox.Size = UDim2.new(1, -10, 1, -10)
+    CodeBox.Position = UDim2.new(0, 8, 0, 8)
+    CodeBox.BackgroundTransparency = 1
+    CodeBox.TextColor3 = Color3.fromRGB(168, 228, 125)
+    CodeBox.Font = Enum.Font.Code
+    CodeBox.TextSize = 12
+    CodeBox.TextXAlignment = Enum.TextXAlignment.Left
+    CodeBox.TextYAlignment = Enum.TextYAlignment.Top
+    CodeBox.ClearTextOnFocus = false
+    CodeBox.MultiLine = true
+    CodeBox.PlaceholderText = ""
+    CodeBox.Text = ""
+    CodeBox.Parent = scroller
+
+    RemoteExecuteCodeBtn.Size = UDim2.new(1, -20, 0, 32)
+    RemoteExecuteCodeBtn.Position = UDim2.new(0, 10, 1, -40)
+    RemoteExecuteCodeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    RemoteExecuteCodeBtn.Text = "Deploy Cross-Game Execution String"
+    RemoteExecuteCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RemoteExecuteCodeBtn.Font = Enum.Font.GothamBold
+    RemoteExecuteCodeBtn.TextSize = 12
+    RemoteExecuteCodeBtn.Parent = panel
+    Instance.new("UICorner", RemoteExecuteCodeBtn).CornerRadius = UDim.new(0, 4)
+end
 
 local ProfileModal = Instance.new("Frame")
 ProfileModal.Name = "UserProfileModal"
@@ -1625,20 +1697,24 @@ ProfileModal.Visible = false
 ProfileModal.ZIndex = 50
 ProfileModal.Parent = ViewContainer
 Instance.new("UICorner", ProfileModal).CornerRadius = UDim.new(0, 10)
-local profileStroke = Instance.new("UIStroke", ProfileModal)
-profileStroke.Color = Color3.fromRGB(56, 58, 68)
-profileStroke.Thickness = 1.5
 
-local ProfileCloseBtn = Instance.new("TextButton")
-ProfileCloseBtn.Size = UDim2.new(0, 26, 0, 26)
-ProfileCloseBtn.Position = UDim2.new(1, -32, 0, 8)
-ProfileCloseBtn.BackgroundTransparency = 1
-ProfileCloseBtn.Text = "X"
-ProfileCloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-ProfileCloseBtn.Font = Enum.Font.GothamBold
-ProfileCloseBtn.TextSize = 14
-ProfileCloseBtn.ZIndex = 52
-ProfileCloseBtn.Parent = ProfileModal
+do
+    local s = Instance.new("UIStroke", ProfileModal)
+    s.Color = Color3.fromRGB(56, 58, 68)
+    s.Thickness = 1.5
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 26, 0, 26)
+    closeBtn.Position = UDim2.new(1, -32, 0, 8)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 14
+    closeBtn.ZIndex = 52
+    closeBtn.Parent = ProfileModal
+    closeBtn.MouseButton1Click:Connect(function() ProfileModal.Visible = false end)
+end
 
 local ProfileAvatar = Instance.new("ImageLabel")
 ProfileAvatar.Size = UDim2.new(0, 56, 0, 56)
@@ -1649,48 +1725,50 @@ ProfileAvatar.ZIndex = 51
 ProfileAvatar.Parent = ProfileModal
 Instance.new("UICorner", ProfileAvatar).CornerRadius = UDim.new(1, 0)
 
-local ProfileNameContainer = Instance.new("Frame")
-ProfileNameContainer.Size = UDim2.new(1, -120, 0, 22)
-ProfileNameContainer.Position = UDim2.new(0, 82, 0, 16)
-ProfileNameContainer.BackgroundTransparency = 1
-ProfileNameContainer.ZIndex = 51
-ProfileNameContainer.Parent = ProfileModal
-
-local ProfileNameLayout = Instance.new("UIListLayout", ProfileNameContainer)
-ProfileNameLayout.FillDirection = Enum.FillDirection.Horizontal
-ProfileNameLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-ProfileNameLayout.Padding = UDim.new(0, 6)
-
 local ProfileName = Instance.new("TextLabel")
-ProfileName.Size = UDim2.new(0, 0, 1, 0)
-ProfileName.AutomaticSize = Enum.AutomaticSize.X
-ProfileName.BackgroundTransparency = 1
-ProfileName.Font = Enum.Font.GothamBold
-ProfileName.TextSize = 14
-ProfileName.TextXAlignment = Enum.TextXAlignment.Left
-ProfileName.TextColor3 = Color3.fromRGB(242, 243, 245)
-ProfileName.ZIndex = 51
-ProfileName.Parent = ProfileNameContainer
-
 local ProfileExecBadge = Instance.new("Frame")
-ProfileExecBadge.Size = UDim2.new(0, 0, 0, 18)
-ProfileExecBadge.AutomaticSize = Enum.AutomaticSize.X
-ProfileExecBadge.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
-ProfileExecBadge.BorderSizePixel = 0
-ProfileExecBadge.ZIndex = 51
-ProfileExecBadge.Parent = ProfileNameContainer
-Instance.new("UICorner", ProfileExecBadge).CornerRadius = UDim.new(0, 4)
-
 local ProfileExecText = Instance.new("TextLabel")
-ProfileExecText.Size = UDim2.new(0, 0, 1, 0)
-ProfileExecText.AutomaticSize = Enum.AutomaticSize.X
-ProfileExecText.BackgroundTransparency = 1
-ProfileExecText.Font = Enum.Font.GothamBold
-ProfileExecText.TextSize = 10
-ProfileExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
-ProfileExecText.Text = " ⚙️ Exec "
-ProfileExecText.ZIndex = 52
-ProfileExecText.Parent = ProfileExecBadge
+do
+    local nameC = Instance.new("Frame")
+    nameC.Size = UDim2.new(1, -120, 0, 22)
+    nameC.Position = UDim2.new(0, 82, 0, 16)
+    nameC.BackgroundTransparency = 1
+    nameC.ZIndex = 51
+    nameC.Parent = ProfileModal
+
+    local layout = Instance.new("UIListLayout", nameC)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0, 6)
+
+    ProfileName.Size = UDim2.new(0, 0, 1, 0)
+    ProfileName.AutomaticSize = Enum.AutomaticSize.X
+    ProfileName.BackgroundTransparency = 1
+    ProfileName.Font = Enum.Font.GothamBold
+    ProfileName.TextSize = 14
+    ProfileName.TextXAlignment = Enum.TextXAlignment.Left
+    ProfileName.TextColor3 = Color3.fromRGB(242, 243, 245)
+    ProfileName.ZIndex = 51
+    ProfileName.Parent = nameC
+
+    ProfileExecBadge.Size = UDim2.new(0, 0, 0, 18)
+    ProfileExecBadge.AutomaticSize = Enum.AutomaticSize.X
+    ProfileExecBadge.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    ProfileExecBadge.BorderSizePixel = 0
+    ProfileExecBadge.ZIndex = 51
+    ProfileExecBadge.Parent = nameC
+    Instance.new("UICorner", ProfileExecBadge).CornerRadius = UDim.new(0, 4)
+
+    ProfileExecText.Size = UDim2.new(0, 0, 1, 0)
+    ProfileExecText.AutomaticSize = Enum.AutomaticSize.X
+    ProfileExecText.BackgroundTransparency = 1
+    ProfileExecText.Font = Enum.Font.GothamBold
+    ProfileExecText.TextSize = 10
+    ProfileExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ProfileExecText.Text = " ⚙️ Exec "
+    ProfileExecText.ZIndex = 52
+    ProfileExecText.Parent = ProfileExecBadge
+end
 
 local ProfileRole = Instance.new("TextLabel")
 ProfileRole.Size = UDim2.new(1, -120, 0, 18)
@@ -1703,137 +1781,141 @@ ProfileRole.TextColor3 = Color3.fromRGB(148, 155, 164)
 ProfileRole.ZIndex = 51
 ProfileRole.Parent = ProfileModal
 
-local ProfileDetailsFrame = Instance.new("Frame")
-ProfileDetailsFrame.Size = UDim2.new(1, -32, 0, 78)
-ProfileDetailsFrame.Position = UDim2.new(0, 16, 0, 80)
-ProfileDetailsFrame.BackgroundColor3 = Color3.fromRGB(20, 21, 24)
-ProfileDetailsFrame.BorderSizePixel = 0
-ProfileDetailsFrame.ZIndex = 51
-ProfileDetailsFrame.Parent = ProfileModal
-Instance.new("UICorner", ProfileDetailsFrame).CornerRadius = UDim.new(0, 6)
-
 local ProfileDetailsText = Instance.new("TextLabel")
-ProfileDetailsText.Size = UDim2.new(1, -16, 1, -6)
-ProfileDetailsText.Position = UDim2.new(0, 8, 0, 3)
-ProfileDetailsText.BackgroundTransparency = 1
-ProfileDetailsText.Font = Enum.Font.Gotham
-ProfileDetailsText.TextSize = 11
-ProfileDetailsText.TextXAlignment = Enum.TextXAlignment.Left
-ProfileDetailsText.TextYAlignment = Enum.TextYAlignment.Top
-ProfileDetailsText.TextColor3 = Color3.fromRGB(181, 186, 193)
-ProfileDetailsText.RichText = true
-ProfileDetailsText.ZIndex = 52
-ProfileDetailsText.Parent = ProfileDetailsFrame
+do
+    local detailsF = Instance.new("Frame")
+    detailsF.Size = UDim2.new(1, -32, 0, 78)
+    detailsF.Position = UDim2.new(0, 16, 0, 80)
+    detailsF.BackgroundColor3 = Color3.fromRGB(20, 21, 24)
+    detailsF.BorderSizePixel = 0
+    detailsF.ZIndex = 51
+    detailsF.Parent = ProfileModal
+    Instance.new("UICorner", detailsF).CornerRadius = UDim.new(0, 6)
 
-local ProfileUsedExecsContainer = Instance.new("Frame")
-ProfileUsedExecsContainer.Size = UDim2.new(1, -32, 0, 24)
-ProfileUsedExecsContainer.Position = UDim2.new(0, 16, 0, 164)
-ProfileUsedExecsContainer.BackgroundTransparency = 1
-ProfileUsedExecsContainer.ZIndex = 51
-ProfileUsedExecsContainer.Parent = ProfileModal
-
-local ProfileUsedLabel = Instance.new("TextLabel")
-ProfileUsedLabel.Size = UDim2.new(0, 84, 1, 0)
-ProfileUsedLabel.Position = UDim2.new(0, 0, 0, 0)
-ProfileUsedLabel.BackgroundTransparency = 1
-ProfileUsedLabel.Font = Enum.Font.GothamBold
-ProfileUsedLabel.TextSize = 9
-ProfileUsedLabel.TextColor3 = Color3.fromRGB(148, 155, 164)
-ProfileUsedLabel.Text = "EXECUTORES:"
-ProfileUsedLabel.TextXAlignment = Enum.TextXAlignment.Left
-ProfileUsedLabel.ZIndex = 52
-ProfileUsedLabel.Parent = ProfileUsedExecsContainer
+    ProfileDetailsText.Size = UDim2.new(1, -16, 1, -6)
+    ProfileDetailsText.Position = UDim2.new(0, 8, 0, 3)
+    ProfileDetailsText.BackgroundTransparency = 1
+    ProfileDetailsText.Font = Enum.Font.Gotham
+    ProfileDetailsText.TextSize = 11
+    ProfileDetailsText.TextXAlignment = Enum.TextXAlignment.Left
+    ProfileDetailsText.TextYAlignment = Enum.TextYAlignment.Top
+    ProfileDetailsText.TextColor3 = Color3.fromRGB(181, 186, 193)
+    ProfileDetailsText.RichText = true
+    ProfileDetailsText.ZIndex = 52
+    ProfileDetailsText.Parent = detailsF
+end
 
 local ProfileUsedExecsScroller = Instance.new("ScrollingFrame")
-ProfileUsedExecsScroller.Size = UDim2.new(1, -88, 1, 0)
-ProfileUsedExecsScroller.Position = UDim2.new(0, 88, 0, 0)
-ProfileUsedExecsScroller.BackgroundTransparency = 1
-ProfileUsedExecsScroller.BorderSizePixel = 0
-ProfileUsedExecsScroller.ScrollBarThickness = 2
-ProfileUsedExecsScroller.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
-ProfileUsedExecsScroller.AutomaticCanvasSize = Enum.AutomaticSize.X
-ProfileUsedExecsScroller.ScrollingDirection = Enum.ScrollingDirection.X
-ProfileUsedExecsScroller.ZIndex = 52
-ProfileUsedExecsScroller.Parent = ProfileUsedExecsContainer
+do
+    local usedC = Instance.new("Frame")
+    usedC.Size = UDim2.new(1, -32, 0, 24)
+    usedC.Position = UDim2.new(0, 16, 0, 164)
+    usedC.BackgroundTransparency = 1
+    usedC.ZIndex = 51
+    usedC.Parent = ProfileModal
 
-local ProfileUsedLayout = Instance.new("UIListLayout", ProfileUsedExecsScroller)
-ProfileUsedLayout.FillDirection = Enum.FillDirection.Horizontal
-ProfileUsedLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ProfileUsedLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-ProfileUsedLayout.Padding = UDim.new(0, 4)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0, 84, 1, 0)
+    lbl.Position = UDim2.new(0, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 9
+    lbl.TextColor3 = Color3.fromRGB(148, 155, 164)
+    lbl.Text = "EXECUTORES:"
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 52
+    lbl.Parent = usedC
 
-ProfileUsedLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ProfileUsedExecsScroller.CanvasSize = UDim2.new(0, ProfileUsedLayout.AbsoluteContentSize.X + 10, 0, 0)
-end)
+    ProfileUsedExecsScroller.Size = UDim2.new(1, -88, 1, 0)
+    ProfileUsedExecsScroller.Position = UDim2.new(0, 88, 0, 0)
+    ProfileUsedExecsScroller.BackgroundTransparency = 1
+    ProfileUsedExecsScroller.BorderSizePixel = 0
+    ProfileUsedExecsScroller.ScrollBarThickness = 2
+    ProfileUsedExecsScroller.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
+    ProfileUsedExecsScroller.AutomaticCanvasSize = Enum.AutomaticSize.X
+    ProfileUsedExecsScroller.ScrollingDirection = Enum.ScrollingDirection.X
+    ProfileUsedExecsScroller.ZIndex = 52
+    ProfileUsedExecsScroller.Parent = usedC
 
-local ProfileButtonsFrame = Instance.new("Frame")
-ProfileButtonsFrame.Size = UDim2.new(1, -32, 0, 110)
-ProfileButtonsFrame.Position = UDim2.new(0, 16, 0, 196)
-ProfileButtonsFrame.BackgroundTransparency = 1
-ProfileButtonsFrame.ZIndex = 51
-ProfileButtonsFrame.Parent = ProfileModal
+    local layout = Instance.new("UIListLayout", ProfileUsedExecsScroller)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0, 4)
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ProfileUsedExecsScroller.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.X + 10, 0, 0)
+    end)
+end
 
 local ProfileBtnMention = Instance.new("TextButton")
-ProfileBtnMention.Size = UDim2.new(0.5, -4, 0, 32)
-ProfileBtnMention.Position = UDim2.new(0, 0, 0, 0)
-ProfileBtnMention.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-ProfileBtnMention.Text = "💬 Mention in Chat"
-ProfileBtnMention.TextColor3 = Color3.fromRGB(255, 255, 255)
-ProfileBtnMention.Font = Enum.Font.GothamBold
-ProfileBtnMention.TextSize = 11
-ProfileBtnMention.ZIndex = 52
-ProfileBtnMention.Parent = ProfileButtonsFrame
-Instance.new("UICorner", ProfileBtnMention).CornerRadius = UDim.new(0, 4)
-
 local ProfileBtnAction = Instance.new("TextButton")
-ProfileBtnAction.Size = UDim2.new(0.5, -4, 0, 32)
-ProfileBtnAction.Position = UDim2.new(0.5, 4, 0, 0)
-ProfileBtnAction.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
-ProfileBtnAction.Text = "⚡ Teleport to User"
-ProfileBtnAction.TextColor3 = Color3.fromRGB(255, 255, 255)
-ProfileBtnAction.Font = Enum.Font.GothamBold
-ProfileBtnAction.TextSize = 11
-ProfileBtnAction.ZIndex = 52
-ProfileBtnAction.Parent = ProfileButtonsFrame
-Instance.new("UICorner", ProfileBtnAction).CornerRadius = UDim.new(0, 4)
-
 local ProfileBtnSpectate = Instance.new("TextButton")
-ProfileBtnSpectate.Size = UDim2.new(0.5, -4, 0, 32)
-ProfileBtnSpectate.Position = UDim2.new(0, 0, 0, 38)
-ProfileBtnSpectate.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
-ProfileBtnSpectate.Text = "👁️ Spectate"
-ProfileBtnSpectate.TextColor3 = Color3.fromRGB(220, 222, 226)
-ProfileBtnSpectate.Font = Enum.Font.GothamBold
-ProfileBtnSpectate.TextSize = 11
-ProfileBtnSpectate.ZIndex = 52
-ProfileBtnSpectate.Parent = ProfileButtonsFrame
-Instance.new("UICorner", ProfileBtnSpectate).CornerRadius = UDim.new(0, 4)
-
 local ProfileBtnCopyLink = Instance.new("TextButton")
-ProfileBtnCopyLink.Size = UDim2.new(0.5, -4, 0, 32)
-ProfileBtnCopyLink.Position = UDim2.new(0.5, 4, 0, 38)
-ProfileBtnCopyLink.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
-ProfileBtnCopyLink.Text = "🔗 Copy Profile URL"
-ProfileBtnCopyLink.TextColor3 = Color3.fromRGB(220, 222, 226)
-ProfileBtnCopyLink.Font = Enum.Font.GothamBold
-ProfileBtnCopyLink.TextSize = 11
-ProfileBtnCopyLink.ZIndex = 52
-ProfileBtnCopyLink.Parent = ProfileButtonsFrame
-Instance.new("UICorner", ProfileBtnCopyLink).CornerRadius = UDim.new(0, 4)
+do
+    local btnsF = Instance.new("Frame")
+    btnsF.Size = UDim2.new(1, -32, 0, 110)
+    btnsF.Position = UDim2.new(0, 16, 0, 196)
+    btnsF.BackgroundTransparency = 1
+    btnsF.ZIndex = 51
+    btnsF.Parent = ProfileModal
 
-local ProfileBtnBack = Instance.new("TextButton")
-ProfileBtnBack.Size = UDim2.new(1, 0, 0, 26)
-ProfileBtnBack.Position = UDim2.new(0, 0, 0, 76)
-ProfileBtnBack.BackgroundTransparency = 1
-ProfileBtnBack.Text = "Close Profile"
-ProfileBtnBack.TextColor3 = Color3.fromRGB(148, 155, 164)
-ProfileBtnBack.Font = Enum.Font.Gotham
-ProfileBtnBack.TextSize = 11
-ProfileBtnBack.ZIndex = 52
-ProfileBtnBack.Parent = ProfileButtonsFrame
+    ProfileBtnMention.Size = UDim2.new(0.5, -4, 0, 32)
+    ProfileBtnMention.Position = UDim2.new(0, 0, 0, 0)
+    ProfileBtnMention.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    ProfileBtnMention.Text = "💬 Mention in Chat"
+    ProfileBtnMention.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ProfileBtnMention.Font = Enum.Font.GothamBold
+    ProfileBtnMention.TextSize = 11
+    ProfileBtnMention.ZIndex = 52
+    ProfileBtnMention.Parent = btnsF
+    Instance.new("UICorner", ProfileBtnMention).CornerRadius = UDim.new(0, 4)
 
-ProfileCloseBtn.MouseButton1Click:Connect(function() ProfileModal.Visible = false end)
-ProfileBtnBack.MouseButton1Click:Connect(function() ProfileModal.Visible = false end)
+    ProfileBtnAction.Size = UDim2.new(0.5, -4, 0, 32)
+    ProfileBtnAction.Position = UDim2.new(0.5, 4, 0, 0)
+    ProfileBtnAction.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    ProfileBtnAction.Text = "⚡ Teleport to User"
+    ProfileBtnAction.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ProfileBtnAction.Font = Enum.Font.GothamBold
+    ProfileBtnAction.TextSize = 11
+    ProfileBtnAction.ZIndex = 52
+    ProfileBtnAction.Parent = btnsF
+    Instance.new("UICorner", ProfileBtnAction).CornerRadius = UDim.new(0, 4)
+
+    ProfileBtnSpectate.Size = UDim2.new(0.5, -4, 0, 32)
+    ProfileBtnSpectate.Position = UDim2.new(0, 0, 0, 38)
+    ProfileBtnSpectate.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+    ProfileBtnSpectate.Text = "👁️ Spectate"
+    ProfileBtnSpectate.TextColor3 = Color3.fromRGB(220, 222, 226)
+    ProfileBtnSpectate.Font = Enum.Font.GothamBold
+    ProfileBtnSpectate.TextSize = 11
+    ProfileBtnSpectate.ZIndex = 52
+    ProfileBtnSpectate.Parent = btnsF
+    Instance.new("UICorner", ProfileBtnSpectate).CornerRadius = UDim.new(0, 4)
+
+    ProfileBtnCopyLink.Size = UDim2.new(0.5, -4, 0, 32)
+    ProfileBtnCopyLink.Position = UDim2.new(0.5, 4, 0, 38)
+    ProfileBtnCopyLink.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+    ProfileBtnCopyLink.Text = "🔗 Copy Profile URL"
+    ProfileBtnCopyLink.TextColor3 = Color3.fromRGB(220, 222, 226)
+    ProfileBtnCopyLink.Font = Enum.Font.GothamBold
+    ProfileBtnCopyLink.TextSize = 11
+    ProfileBtnCopyLink.ZIndex = 52
+    ProfileBtnCopyLink.Parent = btnsF
+    Instance.new("UICorner", ProfileBtnCopyLink).CornerRadius = UDim.new(0, 4)
+
+    local backBtn = Instance.new("TextButton")
+    backBtn.Size = UDim2.new(1, 0, 0, 26)
+    backBtn.Position = UDim2.new(0, 0, 0, 76)
+    backBtn.BackgroundTransparency = 1
+    backBtn.Text = "Close Profile"
+    backBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
+    backBtn.Font = Enum.Font.Gotham
+    backBtn.TextSize = 11
+    backBtn.ZIndex = 52
+    backBtn.Parent = btnsF
+    backBtn.MouseButton1Click:Connect(function() ProfileModal.Visible = false end)
+end
 
 local selectTab
 local currentProfileUser = nil
@@ -2837,28 +2919,30 @@ RemoteExecuteCodeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local dragging, dragInput, dragStart, startPos
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = WindowFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
-        end)
-    end
-end)
+do
+    local dragging, dragInput, dragStart, startPos
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = WindowFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
 
-TitleBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-end)
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            WindowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and (input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert) then
@@ -2873,13 +2957,61 @@ SoundBtn.MouseButton1Click:Connect(function()
     showToast(soundEnabled and "Chat sounds enabled" or "Chat sounds muted", Color3.fromRGB(148, 155, 164))
 end)
 
-local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    BodyFrame.Visible = not minimized
-    WindowFrame.Size = minimized and UDim2.new(0, 780, 0, 38) or UDim2.new(0, 780, 0, 500)
-    MinBtn.Text = minimized and "+" or "-"
-end)
+do
+    local lastUnminimizedSize = WindowFrame.Size
+    local resizing = false
+    local resizeStart = Vector2.zero
+    local startSize = Vector2.zero
+    local minimized = false
+
+    ResizeHandle.MouseEnter:Connect(function()
+        ResizeHandle.TextColor3 = Color3.fromRGB(88, 101, 242)
+    end)
+    ResizeHandle.MouseLeave:Connect(function()
+        if not resizing then
+            ResizeHandle.TextColor3 = Color3.fromRGB(120, 125, 134)
+        end
+    end)
+
+    ResizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if minimized then return end
+            resizing = true
+            resizeStart = Vector2.new(input.Position.X, input.Position.Y)
+            startSize = Vector2.new(WindowFrame.AbsoluteSize.X, WindowFrame.AbsoluteSize.Y)
+            ResizeHandle.TextColor3 = Color3.fromRGB(88, 101, 242)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if resizing then
+                resizing = false
+                ResizeHandle.TextColor3 = Color3.fromRGB(120, 125, 134)
+                lastUnminimizedSize = WindowFrame.Size
+            end
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local deltaX = input.Position.X - resizeStart.X
+            local deltaY = input.Position.Y - resizeStart.Y
+            local newWidth = math.clamp(startSize.X + deltaX, 480, 1920)
+            local newHeight = math.clamp(startSize.Y + deltaY, 320, 1080)
+            WindowFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+            lastUnminimizedSize = WindowFrame.Size
+        end
+    end)
+
+    MinBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        BodyFrame.Visible = not minimized
+        ResizeHandle.Visible = not minimized
+        WindowFrame.Size = minimized and UDim2.new(0, WindowFrame.Size.X.Offset, 0, 38) or (lastUnminimizedSize or UDim2.new(0, 780, 0, 500))
+        MinBtn.Text = minimized and "+" or "-"
+    end)
+end
 
 SpectateStopBtn.MouseButton1Click:Connect(function()
     stopSpectate()
@@ -2887,11 +3019,18 @@ SpectateStopBtn.MouseButton1Click:Connect(function()
     showToast("Stopped spectating", Color3.fromRGB(237, 66, 69))
 end)
 
-CloseBtn.MouseButton1Click:Connect(function()
+local function cleanupSelf()
     running = false
+    _G.ChatHub_Running = false
+    _G.ChatHub_Loaded = false
     stopSpectate()
-    pcall(function() SpectateHud:Destroy() end)
-    pcall(function() ScreenGui:Destroy() end)
+    pcall(function() if SpectateHud and SpectateHud.Parent then SpectateHud:Destroy() end end)
+    pcall(function() if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end end)
+end
+_G.ChatHub_Cleanup = cleanupSelf
+
+CloseBtn.MouseButton1Click:Connect(function()
+    cleanupSelf()
 end)
 
 updatePresence()
@@ -2905,3 +3044,5 @@ task.spawn(function()
         fetchData()
     end
 end)
+
+_G.ChatHub_Loaded = true
