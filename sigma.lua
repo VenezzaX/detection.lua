@@ -75,6 +75,16 @@ local cachedUserIds = {}
 local cachedUserExecutors = {}
 local cachedHistoryData = {}
 local userExecutorsHistory = {}
+local lastRenderedChatSignature = ""
+local pendingChatRedraw = false
+local cachedLastMessages = {}
+local lastUsersSignature = ""
+local pendingUsersRedraw = false
+local pendingHistoryRedraw = false
+local pendingOfflineUsers = {}
+local renderedOfflineIndex = 0
+local isRenderingOfflineBatch = false
+local OFFLINE_CHUNK_SIZE = 25
 
 local function trackUserExecutor(uname, execName)
     if not uname or uname == "" or not execName or execName == "" then return end
@@ -132,9 +142,11 @@ _G.CurrentTpTarget = "none"
 _G.CurrentActiveEffect = "none"
 
 local gameName = "Roblox Game"
-pcall(function()
-    local info = MarketplaceService:GetProductInfo(PlaceId)
-    if info and info.Name then gameName = info.Name end
+task.spawn(function()
+    pcall(function()
+        local info = MarketplaceService:GetProductInfo(PlaceId)
+        if info and info.Name then gameName = info.Name end
+    end)
 end)
 
 local function getExecutor()
@@ -1152,6 +1164,11 @@ end
 local openUserProfile
 
 local function refreshHistoryUI(historyData, usersData)
+    if not WindowFrame.Visible or currentTab ~= "history" then
+        pendingHistoryRedraw = true
+        return
+    end
+    pendingHistoryRedraw = false
     for _, child in ipairs(HistoryScroller:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
@@ -2083,12 +2100,19 @@ selectTab = function(tab)
 
     if tab == "users" then
         ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.BackgroundTransparency = 0; ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); UsersView.Visible = true
+        if pendingUsersRedraw or lastUsersSignature == "" then
+            refreshUIList(cachedUsersData)
+        end
     elseif tab == "server" then
         ChannelServerChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelServerChat.BackgroundTransparency = 0; ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255)
         TextBox.PlaceholderText = "Message #server-chat... (Press Enter)"
         ChatChannelTitle.Text = "🎮 # server-chat"
         ChatChannelDesc.Text = "Local server chat • Job: " .. string.sub(JobId, 1, 8) .. "..."
         ChatView.Visible = true
+        pendingChatRedraw = true
+        if cachedLastMessages and #cachedLastMessages > 0 then
+            refreshChatUI(cachedLastMessages, cachedAdminPool)
+        end
         task.spawn(function() if fetchData then fetchData() end end)
     elseif tab == "global" then
         ChannelGlobalChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelGlobalChat.BackgroundTransparency = 0; ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2096,6 +2120,10 @@ selectTab = function(tab)
         ChatChannelTitle.Text = "💬 # global-cross-chat"
         ChatChannelDesc.Text = "Cross-game network communication"
         ChatView.Visible = true
+        pendingChatRedraw = true
+        if cachedLastMessages and #cachedLastMessages > 0 then
+            refreshChatUI(cachedLastMessages, cachedAdminPool)
+        end
         task.spawn(function() if fetchData then fetchData() end end)
     elseif tab == "history" then
         ChannelHistory.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelHistory.BackgroundTransparency = 0; ChannelHistory.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2309,11 +2337,27 @@ local function createUserRow(user, online)
     end
 end
 
+local function loadNextOfflineBatch(count)
+    if isRenderingOfflineBatch then return end
+    if not pendingOfflineUsers or #pendingOfflineUsers == 0 then return end
+    if renderedOfflineIndex >= #pendingOfflineUsers then return end
+    isRenderingOfflineBatch = true
+    local batchSize = count or OFFLINE_CHUNK_SIZE
+    local stopIndex = math.min(renderedOfflineIndex + batchSize, #pendingOfflineUsers)
+    for i = renderedOfflineIndex + 1, stopIndex do
+        createUserRow(pendingOfflineUsers[i], false)
+    end
+    renderedOfflineIndex = stopIndex
+    isRenderingOfflineBatch = false
+end
+
 local function refreshUIList(data)
     if not data then return end
     cachedUsersData = data
-    for _, child in ipairs(UsersScroller:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
-    for _, child in ipairs(TargetScroller:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    if not WindowFrame.Visible or currentTab ~= "users" then
+        pendingUsersRedraw = true
+        return
+    end
 
     local onlineList = {}
     local offlineList = {}
@@ -2338,6 +2382,16 @@ local function refreshUIList(data)
             end
         end
     end
+
+    local sig = #onlineList .. "_" .. #offlineList .. "_" .. searchQuery .. "_" .. tostring(IsAdmin or IsSubAdmin)
+    if sig == lastUsersSignature and not pendingUsersRedraw then
+        return
+    end
+    lastUsersSignature = sig
+    pendingUsersRedraw = false
+
+    for _, child in ipairs(UsersScroller:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    for _, child in ipairs(TargetScroller:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
 
     OnlineCounterText.Text = string.format("🟢 %d Online • %d Total", #onlineList, #onlineList + #offlineList)
     ChannelUsers.Text = string.format("   👥  users-network  (%d)", #onlineList)
@@ -2378,29 +2432,94 @@ local function refreshUIList(data)
         end
     end
 
-    if (IsAdmin or IsSubAdmin) and #offlineList > 0 then
-        createCategoryHeader("Offline Registry (Admin History) — " .. #offlineList, Color3.fromRGB(110, 115, 122))
-        for _, user in ipairs(offlineList) do
-            createUserRow(user, false)
-        end
+    pendingOfflineUsers = offlineList
+    renderedOfflineIndex = 0
+    if #offlineList > 0 then
+        local offlineTitle = (IsAdmin or IsSubAdmin) and ("Offline Registry (Admin History) — " .. #offlineList) or ("Offline Registry — " .. #offlineList)
+        createCategoryHeader(offlineTitle, Color3.fromRGB(110, 115, 122))
+        loadNextOfflineBatch(OFFLINE_CHUNK_SIZE)
     end
 end
 
 SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
     searchQuery = SearchBox.Text
+    pendingUsersRedraw = true
     refreshUIList(cachedUsersData)
 end)
 
 SearchClearBtn.MouseButton1Click:Connect(function()
     SearchBox.Text = ""
     searchQuery = ""
+    pendingUsersRedraw = true
     refreshUIList(cachedUsersData)
 end)
 
+UsersScroller:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+    if not WindowFrame.Visible or currentTab ~= "users" then return end
+    if renderedOfflineIndex < #pendingOfflineUsers and not isRenderingOfflineBatch then
+        local currentY = UsersScroller.CanvasPosition.Y
+        local visibleY = UsersScroller.AbsoluteWindowSize.Y
+        local totalY = UsersScroller.CanvasSize.Y.Offset
+        if currentY + visibleY >= totalY - 350 then
+            loadNextOfflineBatch(OFFLINE_CHUNK_SIZE)
+        end
+    end
+end)
+
+task.spawn(function()
+    while running do
+        task.wait(0.25)
+        if WindowFrame.Visible and currentTab == "users" then
+            if renderedOfflineIndex < #pendingOfflineUsers and not isRenderingOfflineBatch then
+                loadNextOfflineBatch(15)
+            end
+        end
+    end
+end)
+
 local function refreshChatUI(messages, adminPool)
-    for _, child in ipairs(ChatScrolling:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+    if not messages then return end
+    cachedLastMessages = messages
+    cachedAdminPool = adminPool or cachedAdminPool
 
     local hasMention = false
+    for _, msg in ipairs(messages) do
+        local uName = tostring(msg.username or "Unknown")
+        local displayMsg = sanitizeText(msg.message)
+        local isMentioned = string.find(string.lower(displayMsg), "@" .. string.lower(Username), 1, true) ~= nil
+        if isMentioned and uName ~= Username then hasMention = true end
+    end
+
+    if #messages > lastChatCount and lastChatCount > 0 then
+        if soundEnabled then
+            if hasMention then
+                playSound("rbxassetid://9114223177", 0.6)
+            else
+                playSound("rbxassetid://6895079853", 0.35)
+            end
+        end
+    end
+    lastChatCount = #messages
+
+    if not WindowFrame.Visible or (currentTab ~= "server" and currentTab ~= "global") then
+        pendingChatRedraw = true
+        return
+    end
+
+    local lastMsgId = ""
+    if #messages > 0 then
+        local lm = messages[#messages]
+        lastMsgId = tostring(lm.id or lm.created_at or "")
+    end
+    local chatSig = currentTab .. "_" .. #messages .. "_" .. lastMsgId
+    if chatSig == lastRenderedChatSignature and not pendingChatRedraw then
+        return
+    end
+    lastRenderedChatSignature = chatSig
+    pendingChatRedraw = false
+
+    for _, child in ipairs(ChatScrolling:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
+
     for _, msg in ipairs(messages) do
         local uName = tostring(msg.username or "Unknown")
         local displayMsg = sanitizeText(msg.message)
@@ -2563,15 +2682,6 @@ local function refreshChatUI(messages, adminPool)
         MsgText.Text = displayMsg
         MsgText.Parent = ContentFrame
     end
-
-    if #messages > lastChatCount and lastChatCount > 0 then
-        if hasMention then
-            playSound("rbxassetid://9114223177", 0.6)
-        else
-            playSound("rbxassetid://6895079853", 0.35)
-        end
-    end
-    lastChatCount = #messages
 end
 
 local function updatePresence()
@@ -2708,7 +2818,12 @@ fetchData = function()
             end
             cachedUserExecutors[Username] = myExecutor
             cachedAdminPool = adminPool
-            refreshUIList(users)
+            cachedUsersData = users
+            if WindowFrame.Visible and currentTab == "users" then
+                refreshUIList(users)
+            else
+                pendingUsersRedraw = true
+            end
 
             for _, user in ipairs(users) do
                 if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
@@ -2799,8 +2914,10 @@ fetchData = function()
             end
             saveLocalExecHistory()
         end
-        if currentTab == "history" then
+        if WindowFrame.Visible and currentTab == "history" then
             refreshHistoryUI(cachedHistoryData, cachedUsersData)
+        else
+            pendingHistoryRedraw = true
         end
     end
 end
@@ -3023,14 +3140,42 @@ local function cleanupSelf()
     running = false
     _G.ChatHub_Running = false
     _G.ChatHub_Loaded = false
+    _G.ChatHub_SetVisible = nil
+    _G.ChatHub_Window = nil
+    _G.ChatHub_ScreenGui = nil
     stopSpectate()
     pcall(function() if SpectateHud and SpectateHud.Parent then SpectateHud:Destroy() end end)
     pcall(function() if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end end)
 end
 _G.ChatHub_Cleanup = cleanupSelf
 
+_G.ChatHub_SetVisible = function(vis)
+    if WindowFrame and WindowFrame.Parent then
+        WindowFrame.Visible = vis
+    end
+end
+_G.ChatHub_Window = WindowFrame
+_G.ChatHub_ScreenGui = ScreenGui
+
 CloseBtn.MouseButton1Click:Connect(function()
-    cleanupSelf()
+    WindowFrame.Visible = false
+    showToast("Chat Room hidden (Press R-Ctrl or Insert)", Color3.fromRGB(148, 155, 164))
+end)
+
+WindowFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if WindowFrame.Visible then
+        if currentTab == "users" and (pendingUsersRedraw or lastUsersSignature == "") then
+            refreshUIList(cachedUsersData)
+        elseif (currentTab == "server" or currentTab == "global") and (pendingChatRedraw or lastRenderedChatSignature == "") then
+            if cachedLastMessages and #cachedLastMessages > 0 then
+                refreshChatUI(cachedLastMessages, cachedAdminPool)
+            else
+                task.spawn(function() if fetchData then fetchData() end end)
+            end
+        elseif currentTab == "history" and pendingHistoryRedraw then
+            refreshHistoryUI(cachedHistoryData, cachedUsersData)
+        end
+    end
 end)
 
 updatePresence()
