@@ -39,6 +39,8 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local SoundService = game:GetService("SoundService")
 local LocalPlayer = Players.LocalPlayer
 
+local HubTheme = nil
+
 local SUPABASE_URL = "https://nlavwcbdqcmoqmojraeu.supabase.co"
 local SUPABASE_KEY = "sb_publishable__HC4Z5_wV2Daf8o-mgt89Q_z_JH2cif"
 
@@ -163,10 +165,12 @@ saveLocalExecHistory()
 
 local function getExecutorBadgeColor(execName)
     local low = string.lower(tostring(execName or ""))
+    local greenCol = (HubTheme and HubTheme.green) or Color3.fromRGB(46, 204, 113)
+    local accentCol = (HubTheme and HubTheme.accent) or Color3.fromRGB(218, 38, 38)
     if string.find(low, "potassium") then
-        return Color3.fromRGB(35, 165, 90)
+        return greenCol
     elseif string.find(low, "wave") then
-        return Color3.fromRGB(88, 101, 242)
+        return accentCol
     elseif string.find(low, "solara") then
         return Color3.fromRGB(245, 158, 11)
     elseif string.find(low, "synapse") then
@@ -342,6 +346,75 @@ local function stopSpectate()
     end
 end
 
+
+local VH = _G.VoidHub
+local isClassic = false
+local isWasorModern = false
+if VH and VH.UI then
+    if (VH.UI.themeColors and VH.UI.themeColors["Studio Classic"]) or (_G.WASOR_ScreenGui and _G.WASOR_ScreenGui:FindFirstChild("StudioTopRibbon")) then
+        isClassic = true
+    else
+        isWasorModern = true
+    end
+end
+
+if isClassic then
+    HubTheme = {
+        isModern     = false,
+        windowBg     = Color3.fromRGB(37, 37, 38),
+        titleBg      = Color3.fromRGB(45, 45, 48),
+        sidebarBg    = Color3.fromRGB(32, 32, 34),
+        panelBg      = Color3.fromRGB(42, 42, 45),
+        cardBg       = Color3.fromRGB(44, 44, 48),
+        cardHover    = Color3.fromRGB(56, 56, 62),
+        inputBg      = Color3.fromRGB(26, 26, 28),
+        border       = Color3.fromRGB(20, 20, 22),
+        borderSubtle = Color3.fromRGB(55, 55, 58),
+        text         = Color3.fromRGB(225, 225, 228),
+        textMuted    = Color3.fromRGB(160, 160, 165),
+        textDim      = Color3.fromRGB(115, 115, 120),
+        accent       = Color3.fromRGB(0, 122, 204),
+        accentHover  = Color3.fromRGB(28, 140, 224),
+        green        = Color3.fromRGB(76, 175, 80),
+        red          = Color3.fromRGB(215, 60, 60),
+        yellow       = Color3.fromRGB(220, 170, 50),
+        purple       = Color3.fromRGB(160, 120, 220),
+        btnBg        = Color3.fromRGB(50, 50, 54),
+        font         = Enum.Font.SourceSans,
+        fontBold     = Enum.Font.SourceSansBold,
+        fontSemibold = Enum.Font.SourceSansSemibold,
+        cornerRadius = 0,
+    }
+else
+    local curAccent = (VH and VH.State and VH.State.currentThemeColor) or (VH and VH.UI and VH.UI.themeColors and VH.UI.themeColors["Red"]) or Color3.fromRGB(218, 38, 38)
+    HubTheme = {
+        isModern     = true,
+        windowBg     = Color3.fromRGB(18, 18, 22),
+        titleBg      = Color3.fromRGB(24, 24, 28),
+        sidebarBg    = Color3.fromRGB(16, 16, 20),
+        panelBg      = Color3.fromRGB(22, 22, 26),
+        cardBg       = Color3.fromRGB(26, 26, 30),
+        cardHover    = Color3.fromRGB(36, 36, 42),
+        inputBg      = Color3.fromRGB(14, 14, 16),
+        border       = Color3.fromRGB(38, 38, 44),
+        borderSubtle = Color3.fromRGB(48, 48, 54),
+        text         = Color3.fromRGB(240, 240, 245),
+        textMuted    = Color3.fromRGB(160, 160, 170),
+        textDim      = Color3.fromRGB(115, 115, 125),
+        accent       = curAccent,
+        accentHover  = Color3.fromRGB(math.clamp(math.floor(curAccent.R * 255 + 25), 0, 255), math.clamp(math.floor(curAccent.G * 255 + 25), 0, 255), math.clamp(math.floor(curAccent.B * 255 + 25), 0, 255)),
+        green        = Color3.fromRGB(46, 204, 113),
+        red          = Color3.fromRGB(218, 38, 38),
+        yellow       = Color3.fromRGB(241, 196, 15),
+        purple       = Color3.fromRGB(141, 47, 196),
+        btnBg        = Color3.fromRGB(32, 32, 36),
+        font         = Enum.Font.Gotham,
+        fontBold     = Enum.Font.GothamBold,
+        fontSemibold = Enum.Font.GothamMedium,
+        cornerRadius = 8,
+    }
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ChatRoom"
 ScreenGui.ResetOnSpawn = false
@@ -357,14 +430,14 @@ local SpectateHud = Instance.new("Frame")
 SpectateHud.Name = "ChatRoomSpectateHud"
 SpectateHud.Size = UDim2.new(0, 270, 0, 36)
 SpectateHud.Position = UDim2.new(0.5, -135, 0, 15)
-SpectateHud.BackgroundColor3 = Color3.fromRGB(22, 23, 27)
+SpectateHud.BackgroundColor3 = HubTheme.titleBg
 SpectateHud.BorderSizePixel = 0
 SpectateHud.Visible = false
 SpectateHud.Parent = ScreenGui
 Instance.new("UICorner", SpectateHud).CornerRadius = UDim.new(0, 8)
 do
     local s = Instance.new("UIStroke", SpectateHud)
-    s.Color = Color3.fromRGB(88, 101, 242)
+    s.Color = HubTheme.accent
     s.Thickness = 1.5
 end
 
@@ -374,7 +447,7 @@ SpectateText.Position = UDim2.new(0, 10, 0, 0)
 SpectateText.BackgroundTransparency = 1
 SpectateText.Text = "👁️ Spectating..."
 SpectateText.TextColor3 = Color3.fromRGB(242, 243, 245)
-SpectateText.Font = Enum.Font.GothamBold
+SpectateText.Font = HubTheme.fontBold
 SpectateText.TextSize = 12
 SpectateText.TextXAlignment = Enum.TextXAlignment.Left
 SpectateText.TextTruncate = Enum.TextTruncate.AtEnd
@@ -383,10 +456,10 @@ SpectateText.Parent = SpectateHud
 local SpectateStopBtn = Instance.new("TextButton")
 SpectateStopBtn.Size = UDim2.new(0, 60, 0, 24)
 SpectateStopBtn.Position = UDim2.new(1, -68, 0, 6)
-SpectateStopBtn.BackgroundColor3 = Color3.fromRGB(237, 66, 69)
+SpectateStopBtn.BackgroundColor3 = HubTheme.red
 SpectateStopBtn.Text = "Stop X"
 SpectateStopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpectateStopBtn.Font = Enum.Font.GothamBold
+SpectateStopBtn.Font = HubTheme.fontBold
 SpectateStopBtn.TextSize = 11
 SpectateStopBtn.Parent = SpectateHud
 Instance.new("UICorner", SpectateStopBtn).CornerRadius = UDim.new(0, 4)
@@ -395,14 +468,14 @@ local WindowFrame = Instance.new("Frame")
 WindowFrame.Name = "MainWindow"
 WindowFrame.Size = UDim2.new(0, 780, 0, 500)
 WindowFrame.Position = UDim2.new(0.5, -390, 0.5, -250)
-WindowFrame.BackgroundColor3 = Color3.fromRGB(30, 31, 35)
+WindowFrame.BackgroundColor3 = HubTheme.windowBg
 WindowFrame.BorderSizePixel = 0
 WindowFrame.Active = true
 WindowFrame.Parent = ScreenGui
 Instance.new("UICorner", WindowFrame).CornerRadius = UDim.new(0, 10)
 do
     local s = Instance.new("UIStroke", WindowFrame)
-    s.Color = Color3.fromRGB(48, 50, 58)
+    s.Color = HubTheme.border
     s.Thickness = 1
 end
 
@@ -413,7 +486,7 @@ ResizeHandle.Position = UDim2.new(1, -16, 1, -16)
 ResizeHandle.BackgroundTransparency = 1
 ResizeHandle.Text = "◢"
 ResizeHandle.TextColor3 = Color3.fromRGB(120, 125, 134)
-ResizeHandle.Font = Enum.Font.GothamBold
+ResizeHandle.Font = HubTheme.fontBold
 ResizeHandle.TextSize = 12
 ResizeHandle.ZIndex = 60
 ResizeHandle.Parent = WindowFrame
@@ -421,7 +494,7 @@ ResizeHandle.Parent = WindowFrame
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 38)
-TitleBar.BackgroundColor3 = Color3.fromRGB(22, 23, 27)
+TitleBar.BackgroundColor3 = HubTheme.titleBg
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = WindowFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
@@ -431,7 +504,7 @@ do
     local c = Instance.new("Frame")
     c.Size = UDim2.new(1, 0, 0, 10)
     c.Position = UDim2.new(0, 0, 1, -10)
-    c.BackgroundColor3 = Color3.fromRGB(22, 23, 27)
+    c.BackgroundColor3 = HubTheme.titleBg
     c.BorderSizePixel = 0
     c.Parent = TitleBar
 
@@ -447,9 +520,9 @@ do
     tt.Size = UDim2.new(0, 100, 1, 0)
     tt.Position = UDim2.new(0, 40, 0, 0)
     tt.BackgroundTransparency = 1
-    tt.Text = "Chat Room"
+    tt.Text = "WASOR Network Chat"
     tt.TextColor3 = Color3.fromRGB(242, 243, 245)
-    tt.Font = Enum.Font.GothamBold
+    tt.Font = HubTheme.fontBold
     tt.TextSize = 14
     tt.TextXAlignment = Enum.TextXAlignment.Left
     tt.Parent = TitleBar
@@ -458,9 +531,9 @@ do
     st.Size = UDim2.new(0, 140, 1, 0)
     st.Position = UDim2.new(0, 138, 0, 0)
     st.BackgroundTransparency = 1
-    st.Text = "• Cross-Game Network"
+    st.Text = "•"
     st.TextColor3 = Color3.fromRGB(148, 155, 164)
-    st.Font = Enum.Font.Gotham
+    st.Font = HubTheme.font
     st.TextSize = 11
     st.TextXAlignment = Enum.TextXAlignment.Left
     st.Parent = TitleBar
@@ -468,7 +541,7 @@ do
     local pill = Instance.new("Frame")
     pill.Size = UDim2.new(0, 140, 0, 22)
     pill.Position = UDim2.new(0, 290, 0, 8)
-    pill.BackgroundColor3 = Color3.fromRGB(33, 35, 40)
+    pill.BackgroundColor3 = HubTheme.inputBg
     pill.BorderSizePixel = 0
     pill.Parent = TitleBar
     Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 11)
@@ -476,8 +549,8 @@ do
     OnlineCounterText.Size = UDim2.new(1, 0, 1, 0)
     OnlineCounterText.BackgroundTransparency = 1
     OnlineCounterText.Text = "🟢 0 Online"
-    OnlineCounterText.TextColor3 = Color3.fromRGB(53, 219, 131)
-    OnlineCounterText.Font = Enum.Font.GothamBold
+    OnlineCounterText.TextColor3 = HubTheme.green
+    OnlineCounterText.Font = HubTheme.fontBold
     OnlineCounterText.TextSize = 11
     OnlineCounterText.Parent = pill
 end
@@ -497,7 +570,7 @@ do
     SoundBtn.BackgroundTransparency = 1
     SoundBtn.Text = "🔊"
     SoundBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-    SoundBtn.Font = Enum.Font.GothamBold
+    SoundBtn.Font = HubTheme.fontBold
     SoundBtn.TextSize = 14
     SoundBtn.Parent = c
 
@@ -506,7 +579,7 @@ do
     MinBtn.BackgroundTransparency = 1
     MinBtn.Text = "-"
     MinBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.Font = HubTheme.fontBold
     MinBtn.TextSize = 14
     MinBtn.Parent = c
     Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
@@ -526,14 +599,14 @@ do
     CloseBtn.BackgroundTransparency = 1
     CloseBtn.Text = "X"
     CloseBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Font = HubTheme.fontBold
     CloseBtn.TextSize = 14
     CloseBtn.Parent = c
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
 end
 
 CloseBtn.MouseEnter:Connect(function()
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(237, 66, 69)
+    CloseBtn.BackgroundColor3 = HubTheme.red
     CloseBtn.BackgroundTransparency = 0
     CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 end)
@@ -553,11 +626,11 @@ local ToastLabel = Instance.new("TextLabel")
 ToastLabel.Name = "ToastLabel"
 ToastLabel.Size = UDim2.new(0, 340, 0, 32)
 ToastLabel.Position = UDim2.new(0.5, -170, 1, -44)
-ToastLabel.BackgroundColor3 = Color3.fromRGB(20, 21, 25)
+ToastLabel.BackgroundColor3 = HubTheme.windowBg
 ToastLabel.BorderSizePixel = 0
 ToastLabel.Text = ""
 ToastLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToastLabel.Font = Enum.Font.GothamBold
+ToastLabel.Font = HubTheme.fontBold
 ToastLabel.TextSize = 12
 ToastLabel.Visible = false
 ToastLabel.ZIndex = 100
@@ -589,7 +662,7 @@ end
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
 Sidebar.Size = UDim2.new(0, 205, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+Sidebar.BackgroundColor3 = HubTheme.sidebarBg
 Sidebar.BorderSizePixel = 0
 Sidebar.Parent = BodyFrame
 
@@ -600,7 +673,7 @@ do
     c.BackgroundTransparency = 1
     c.Text = "COMMUNITY"
     c.TextColor3 = Color3.fromRGB(120, 125, 134)
-    c.Font = Enum.Font.GothamBold
+    c.Font = HubTheme.fontBold
     c.TextSize = 10
     c.TextXAlignment = Enum.TextXAlignment.Left
     c.Parent = Sidebar
@@ -609,10 +682,10 @@ end
 local ChannelUsers = Instance.new("TextButton")
 ChannelUsers.Size = UDim2.new(1, -16, 0, 32)
 ChannelUsers.Position = UDim2.new(0, 8, 0, 28)
-ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+ChannelUsers.BackgroundColor3 = HubTheme.cardHover
 ChannelUsers.Text = "   👥  users-network"
 ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255)
-ChannelUsers.Font = Enum.Font.GothamSemibold
+ChannelUsers.Font = HubTheme.fontSemibold
 ChannelUsers.TextSize = 12
 ChannelUsers.TextXAlignment = Enum.TextXAlignment.Left
 ChannelUsers.Parent = Sidebar
@@ -624,7 +697,7 @@ ChannelGlobalChat.Position = UDim2.new(0, 8, 0, 64)
 ChannelGlobalChat.BackgroundTransparency = 1
 ChannelGlobalChat.Text = "   💬  global-cross-chat"
 ChannelGlobalChat.TextColor3 = Color3.fromRGB(148, 155, 164)
-ChannelGlobalChat.Font = Enum.Font.GothamSemibold
+ChannelGlobalChat.Font = HubTheme.fontSemibold
 ChannelGlobalChat.TextSize = 12
 ChannelGlobalChat.TextXAlignment = Enum.TextXAlignment.Left
 ChannelGlobalChat.Parent = Sidebar
@@ -636,7 +709,7 @@ ChannelServerChat.Position = UDim2.new(0, 8, 0, 100)
 ChannelServerChat.BackgroundTransparency = 1
 ChannelServerChat.Text = "   🎮  server-chat"
 ChannelServerChat.TextColor3 = Color3.fromRGB(148, 155, 164)
-ChannelServerChat.Font = Enum.Font.GothamSemibold
+ChannelServerChat.Font = HubTheme.fontSemibold
 ChannelServerChat.TextSize = 12
 ChannelServerChat.TextXAlignment = Enum.TextXAlignment.Left
 ChannelServerChat.Parent = Sidebar
@@ -648,7 +721,7 @@ ChannelHistory.Position = UDim2.new(0, 8, 0, 136)
 ChannelHistory.BackgroundTransparency = 1
 ChannelHistory.Text = "   📊  executor-history"
 ChannelHistory.TextColor3 = Color3.fromRGB(148, 155, 164)
-ChannelHistory.Font = Enum.Font.GothamSemibold
+ChannelHistory.Font = HubTheme.fontSemibold
 ChannelHistory.TextSize = 12
 ChannelHistory.TextXAlignment = Enum.TextXAlignment.Left
 ChannelHistory.Parent = Sidebar
@@ -660,7 +733,7 @@ CatAdmin.Position = UDim2.new(0, 12, 0, 176)
 CatAdmin.BackgroundTransparency = 1
 CatAdmin.Text = "ADMINISTRATION"
 CatAdmin.TextColor3 = Color3.fromRGB(120, 125, 134)
-CatAdmin.Font = Enum.Font.GothamBold
+CatAdmin.Font = HubTheme.fontBold
 CatAdmin.TextSize = 10
 CatAdmin.TextXAlignment = Enum.TextXAlignment.Left
 CatAdmin.Visible = false
@@ -672,7 +745,7 @@ ChannelExecPanel.Position = UDim2.new(0, 8, 0, 196)
 ChannelExecPanel.BackgroundTransparency = 1
 ChannelExecPanel.Text = "   🛠️  executor-panel"
 ChannelExecPanel.TextColor3 = Color3.fromRGB(148, 155, 164)
-ChannelExecPanel.Font = Enum.Font.GothamSemibold
+ChannelExecPanel.Font = HubTheme.fontSemibold
 ChannelExecPanel.TextSize = 12
 ChannelExecPanel.TextXAlignment = Enum.TextXAlignment.Left
 ChannelExecPanel.Visible = false
@@ -683,14 +756,14 @@ do
     local bar = Instance.new("Frame")
     bar.Size = UDim2.new(1, 0, 0, 52)
     bar.Position = UDim2.new(0, 0, 1, -52)
-    bar.BackgroundColor3 = Color3.fromRGB(18, 19, 21)
+    bar.BackgroundColor3 = HubTheme.inputBg
     bar.BorderSizePixel = 0
     bar.Parent = Sidebar
 
     local av = Instance.new("ImageLabel")
     av.Size = UDim2.new(0, 34, 0, 34)
     av.Position = UDim2.new(0, 10, 0, 9)
-    av.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    av.BackgroundColor3 = HubTheme.cardBg
     av.BorderSizePixel = 0
     av.Image = getAvatarThumb(UserId, Username)
     av.Parent = bar
@@ -699,7 +772,7 @@ do
     local dot = Instance.new("Frame")
     dot.Size = UDim2.new(0, 10, 0, 10)
     dot.Position = UDim2.new(1, -9, 1, -9)
-    dot.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    dot.BackgroundColor3 = HubTheme.green
     dot.BorderSizePixel = 0
     dot.Parent = av
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
@@ -721,7 +794,7 @@ do
     nl.BackgroundTransparency = 1
     nl.Text = Username
     nl.TextColor3 = Color3.fromRGB(242, 243, 245)
-    nl.Font = Enum.Font.GothamBold
+    nl.Font = HubTheme.fontBold
     nl.TextSize = 12
     nl.TextXAlignment = Enum.TextXAlignment.Left
     nl.Parent = nameBox
@@ -738,7 +811,7 @@ do
     badgeTxt.Size = UDim2.new(0, 0, 1, 0)
     badgeTxt.AutomaticSize = Enum.AutomaticSize.X
     badgeTxt.BackgroundTransparency = 1
-    badgeTxt.Font = Enum.Font.GothamBold
+    badgeTxt.Font = HubTheme.fontBold
     badgeTxt.TextSize = 9
     badgeTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
     badgeTxt.Text = " ⚙️ " .. myExecutor .. " "
@@ -750,7 +823,7 @@ do
     sub.BackgroundTransparency = 1
     sub.Text = "🟢 Online • Roblox Game"
     sub.TextColor3 = Color3.fromRGB(148, 155, 164)
-    sub.Font = Enum.Font.Gotham
+    sub.Font = HubTheme.font
     sub.TextSize = 10
     sub.TextXAlignment = Enum.TextXAlignment.Left
     sub.TextTruncate = Enum.TextTruncate.AtEnd
@@ -795,7 +868,7 @@ do
     SearchBox.PlaceholderText = "Search network users or games in real-time..."
     SearchBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
     SearchBox.TextColor3 = Color3.fromRGB(242, 243, 245)
-    SearchBox.Font = Enum.Font.Gotham
+    SearchBox.Font = HubTheme.font
     SearchBox.TextSize = 12
     SearchBox.TextXAlignment = Enum.TextXAlignment.Left
     SearchBox.ClearTextOnFocus = true
@@ -807,7 +880,7 @@ do
     SearchClearBtn.BackgroundTransparency = 1
     SearchClearBtn.Text = "X"
     SearchClearBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
-    SearchClearBtn.Font = Enum.Font.GothamBold
+    SearchClearBtn.Font = HubTheme.fontBold
     SearchClearBtn.TextSize = 12
     SearchClearBtn.Parent = c
 end
@@ -848,7 +921,7 @@ do
     ChatChannelTitle.BackgroundTransparency = 1
     ChatChannelTitle.Text = "💬 # global-cross-chat"
     ChatChannelTitle.TextColor3 = Color3.fromRGB(242, 243, 245)
-    ChatChannelTitle.Font = Enum.Font.GothamBold
+    ChatChannelTitle.Font = HubTheme.fontBold
     ChatChannelTitle.TextSize = 13
     ChatChannelTitle.TextXAlignment = Enum.TextXAlignment.Left
     ChatChannelTitle.Parent = h
@@ -858,7 +931,7 @@ do
     ChatChannelDesc.BackgroundTransparency = 1
     ChatChannelDesc.Text = "Cross-game network communication"
     ChatChannelDesc.TextColor3 = Color3.fromRGB(120, 125, 134)
-    ChatChannelDesc.Font = Enum.Font.Gotham
+    ChatChannelDesc.Font = HubTheme.font
     ChatChannelDesc.TextSize = 11
     ChatChannelDesc.TextXAlignment = Enum.TextXAlignment.Right
     ChatChannelDesc.Parent = h
@@ -911,7 +984,7 @@ do
     TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
     TextBox.PlaceholderColor3 = Color3.fromRGB(148, 155, 164)
     TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
-    TextBox.Font = Enum.Font.Gotham
+    TextBox.Font = HubTheme.font
     TextBox.TextSize = 13
     TextBox.TextXAlignment = Enum.TextXAlignment.Left
     TextBox.ClearTextOnFocus = true
@@ -922,10 +995,10 @@ do
 
     SendBtn.Size = UDim2.new(0, 38, 1, 0)
     SendBtn.Position = UDim2.new(1, -38, 0, 0)
-    SendBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    SendBtn.BackgroundColor3 = HubTheme.accent
     SendBtn.Text = "🚀"
     SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SendBtn.Font = Enum.Font.GothamBold
+    SendBtn.Font = HubTheme.fontBold
     SendBtn.TextSize = 13
     SendBtn.Parent = inputC
     Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 6)
@@ -934,7 +1007,7 @@ do
     for _, em in ipairs(emojis) do
         local emBtn = Instance.new("TextButton")
         emBtn.Size = UDim2.new(0, 26, 0, 22)
-        emBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+        emBtn.BackgroundColor3 = HubTheme.cardBg
         emBtn.Text = em
         emBtn.TextSize = 12
         emBtn.Parent = bar
@@ -967,7 +1040,7 @@ do
     title.BackgroundTransparency = 1
     title.Text = "📊 # executor-history"
     title.TextColor3 = Color3.fromRGB(242, 243, 245)
-    title.Font = Enum.Font.GothamBold
+    title.Font = HubTheme.fontBold
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = h
@@ -975,17 +1048,17 @@ do
     local subTabs = Instance.new("Frame")
     subTabs.Size = UDim2.new(0, 230, 0, 24)
     subTabs.Position = UDim2.new(1, -230, 0, 1)
-    subTabs.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+    subTabs.BackgroundColor3 = HubTheme.sidebarBg
     subTabs.BorderSizePixel = 0
     subTabs.Parent = h
     Instance.new("UICorner", subTabs).CornerRadius = UDim.new(0, 6)
 
     TabLogBtn.Size = UDim2.new(0.5, -2, 1, -4)
     TabLogBtn.Position = UDim2.new(0, 2, 0, 2)
-    TabLogBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    TabLogBtn.BackgroundColor3 = HubTheme.accent
     TabLogBtn.Text = "📜 Audit Log"
     TabLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabLogBtn.Font = Enum.Font.GothamBold
+    TabLogBtn.Font = HubTheme.fontBold
     TabLogBtn.TextSize = 10
     TabLogBtn.Parent = subTabs
     Instance.new("UICorner", TabLogBtn).CornerRadius = UDim.new(0, 4)
@@ -995,7 +1068,7 @@ do
     TabChartBtn.BackgroundTransparency = 1
     TabChartBtn.Text = "📊 Analytics Chart"
     TabChartBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
-    TabChartBtn.Font = Enum.Font.GothamBold
+    TabChartBtn.Font = HubTheme.fontBold
     TabChartBtn.TextSize = 10
     TabChartBtn.Parent = subTabs
     Instance.new("UICorner", TabChartBtn).CornerRadius = UDim.new(0, 4)
@@ -1013,7 +1086,7 @@ do
         local card = Instance.new("Frame")
         card.Size = UDim2.new(sizeScale, -6, 1, 0)
         card.Position = UDim2.new(posScale, 0, 0, 0)
-        card.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+        card.BackgroundColor3 = HubTheme.sidebarBg
         card.BorderSizePixel = 0
         card.Parent = statFrame
         Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
@@ -1027,7 +1100,7 @@ do
         tLabel.BackgroundTransparency = 1
         tLabel.Text = title
         tLabel.TextColor3 = Color3.fromRGB(148, 155, 164)
-        tLabel.Font = Enum.Font.GothamBold
+        tLabel.Font = HubTheme.fontBold
         tLabel.TextSize = 9
         tLabel.TextXAlignment = Enum.TextXAlignment.Left
         tLabel.Parent = card
@@ -1038,7 +1111,7 @@ do
         vLabel.BackgroundTransparency = 1
         vLabel.Text = "0"
         vLabel.TextColor3 = Color3.fromRGB(242, 243, 245)
-        vLabel.Font = Enum.Font.GothamBold
+        vLabel.Font = HubTheme.fontBold
         vLabel.TextSize = 13
         vLabel.TextXAlignment = Enum.TextXAlignment.Left
         vLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1063,19 +1136,19 @@ do
     local leftBtn = Instance.new("TextButton")
     leftBtn.Size = UDim2.new(0, 22, 1, 0)
     leftBtn.Position = UDim2.new(0, 0, 0, 0)
-    leftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    leftBtn.BackgroundColor3 = HubTheme.cardBg
     leftBtn.Text = "<"
     leftBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
-    leftBtn.Font = Enum.Font.GothamBold
+    leftBtn.Font = HubTheme.fontBold
     leftBtn.TextSize = 13
     leftBtn.Parent = FilterContainer
     Instance.new("UICorner", leftBtn).CornerRadius = UDim.new(0, 4)
 
     leftBtn.MouseEnter:Connect(function()
-        leftBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+        leftBtn.BackgroundColor3 = HubTheme.cardHover
     end)
     leftBtn.MouseLeave:Connect(function()
-        leftBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+        leftBtn.BackgroundColor3 = HubTheme.cardBg
     end)
 
     HistoryFilterBar.Size = UDim2.new(1, -52, 1, 0)
@@ -1083,7 +1156,7 @@ do
     HistoryFilterBar.BackgroundTransparency = 1
     HistoryFilterBar.BorderSizePixel = 0
     HistoryFilterBar.ScrollBarThickness = 4
-    HistoryFilterBar.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
+    HistoryFilterBar.ScrollBarImageColor3 = HubTheme.accent
     HistoryFilterBar.AutomaticCanvasSize = Enum.AutomaticSize.X
     HistoryFilterBar.CanvasSize = UDim2.new(0, 0, 0, 0)
     HistoryFilterBar.ScrollingDirection = Enum.ScrollingDirection.X
@@ -1101,19 +1174,19 @@ do
     local rightBtn = Instance.new("TextButton")
     rightBtn.Size = UDim2.new(0, 22, 1, 0)
     rightBtn.Position = UDim2.new(1, -22, 0, 0)
-    rightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    rightBtn.BackgroundColor3 = HubTheme.cardBg
     rightBtn.Text = ">"
     rightBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
-    rightBtn.Font = Enum.Font.GothamBold
+    rightBtn.Font = HubTheme.fontBold
     rightBtn.TextSize = 13
     rightBtn.Parent = FilterContainer
     Instance.new("UICorner", rightBtn).CornerRadius = UDim.new(0, 4)
 
     rightBtn.MouseEnter:Connect(function()
-        rightBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+        rightBtn.BackgroundColor3 = HubTheme.cardHover
     end)
     rightBtn.MouseLeave:Connect(function()
-        rightBtn.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+        rightBtn.BackgroundColor3 = HubTheme.cardBg
     end)
 
     leftBtn.MouseButton1Click:Connect(function()
@@ -1242,10 +1315,10 @@ local function refreshHistoryUI(historyData, usersData)
         local pill = Instance.new("TextButton")
         pill.Size = UDim2.new(0, 0, 1, 0)
         pill.AutomaticSize = Enum.AutomaticSize.X
-        pill.BackgroundColor3 = (historyFilter == targetFilter) and Color3.fromRGB(88, 101, 242) or Color3.fromRGB(35, 37, 42)
+        pill.BackgroundColor3 = (historyFilter == targetFilter) and HubTheme.accent or HubTheme.cardBg
         pill.Text = "  " .. label .. "  "
         pill.TextColor3 = Color3.fromRGB(242, 243, 245)
-        pill.Font = Enum.Font.GothamBold
+        pill.Font = HubTheme.fontBold
         pill.TextSize = 10
         pill.Parent = HistoryFilterBar
         Instance.new("UICorner", pill).CornerRadius = UDim.new(0, 4)
@@ -1269,7 +1342,7 @@ local function refreshHistoryUI(historyData, usersData)
         if historyFilter == "ALL" or historyFilter == uExec then
             local Row = Instance.new("Frame")
             Row.Size = UDim2.new(1, -6, 0, 44)
-            Row.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+            Row.BackgroundColor3 = HubTheme.cardBg
             Row.BorderSizePixel = 0
             Row.Parent = HistoryScroller
             Instance.new("UICorner", Row).CornerRadius = UDim.new(0, 6)
@@ -1277,7 +1350,7 @@ local function refreshHistoryUI(historyData, usersData)
             local Av = Instance.new("ImageButton")
             Av.Size = UDim2.new(0, 32, 0, 32)
             Av.Position = UDim2.new(0, 8, 0.5, -16)
-            Av.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+            Av.BackgroundColor3 = HubTheme.sidebarBg
             Av.BorderSizePixel = 0
             Av.Image = getAvatarThumb(item.user_id, uName)
             Av.Parent = Row
@@ -1321,7 +1394,7 @@ local function refreshHistoryUI(historyData, usersData)
             NameLbl.Size = UDim2.new(0, 0, 1, 0)
             NameLbl.AutomaticSize = Enum.AutomaticSize.X
             NameLbl.BackgroundTransparency = 1
-            NameLbl.Font = Enum.Font.GothamBold
+            NameLbl.Font = HubTheme.fontBold
             NameLbl.TextSize = 12
             NameLbl.TextColor3 = cachedAdminPool[uName] and Color3.fromRGB(255, 235, 59) or Color3.fromRGB(242, 243, 245)
             NameLbl.Text = (cachedAdminPool[uName] and "👑 " or "") .. uName
@@ -1340,7 +1413,7 @@ local function refreshHistoryUI(historyData, usersData)
             ExecLbl.Size = UDim2.new(0, 0, 1, 0)
             ExecLbl.AutomaticSize = Enum.AutomaticSize.X
             ExecLbl.BackgroundTransparency = 1
-            ExecLbl.Font = Enum.Font.GothamBold
+            ExecLbl.Font = HubTheme.fontBold
             ExecLbl.TextSize = 9
             ExecLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
             ExecLbl.Text = " ⚙️ " .. uExec .. " "
@@ -1350,7 +1423,7 @@ local function refreshHistoryUI(historyData, usersData)
             GameLbl.Size = UDim2.new(0.32, -10, 1, 0)
             GameLbl.Position = UDim2.new(0.52, 0, 0, 0)
             GameLbl.BackgroundTransparency = 1
-            GameLbl.Font = Enum.Font.Gotham
+            GameLbl.Font = HubTheme.font
             GameLbl.TextSize = 11
             GameLbl.TextColor3 = Color3.fromRGB(148, 155, 164)
             GameLbl.Text = "🎮 " .. uGame
@@ -1362,7 +1435,7 @@ local function refreshHistoryUI(historyData, usersData)
             TimeLbl.Size = UDim2.new(0, 60, 1, 0)
             TimeLbl.Position = UDim2.new(1, -68, 0, 0)
             TimeLbl.BackgroundTransparency = 1
-            TimeLbl.Font = Enum.Font.Gotham
+            TimeLbl.Font = HubTheme.font
             TimeLbl.TextSize = 10
             TimeLbl.TextColor3 = Color3.fromRGB(120, 125, 134)
             TimeLbl.Text = uTime ~= "" and uTime or "Recent"
@@ -1381,7 +1454,7 @@ local function refreshHistoryUI(historyData, usersData)
     SecTitle1.BackgroundTransparency = 1
     SecTitle1.Text = "📈 EXECUTOR MARKET SHARE & DISTRIBUTION"
     SecTitle1.TextColor3 = Color3.fromRGB(148, 155, 164)
-    SecTitle1.Font = Enum.Font.GothamBold
+    SecTitle1.Font = HubTheme.fontBold
     SecTitle1.TextSize = 10
     SecTitle1.TextXAlignment = Enum.TextXAlignment.Left
     SecTitle1.Parent = SectionHeader1
@@ -1393,7 +1466,7 @@ local function refreshHistoryUI(historyData, usersData)
 
         local BarCard = Instance.new("Frame")
         BarCard.Size = UDim2.new(1, -6, 0, 48)
-        BarCard.BackgroundColor3 = Color3.fromRGB(33, 35, 40)
+        BarCard.BackgroundColor3 = HubTheme.inputBg
         BarCard.BorderSizePixel = 0
         BarCard.Parent = ChartScroller
         Instance.new("UICorner", BarCard).CornerRadius = UDim.new(0, 6)
@@ -1409,7 +1482,7 @@ local function refreshHistoryUI(historyData, usersData)
         RankLbl.BackgroundTransparency = 1
         RankLbl.Text = medals[idx] or ("#" .. idx)
         RankLbl.TextColor3 = (idx == 1 and Color3.fromRGB(255, 215, 0)) or (idx == 2 and Color3.fromRGB(192, 192, 192)) or (idx == 3 and Color3.fromRGB(205, 127, 50)) or Color3.fromRGB(148, 155, 164)
-        RankLbl.Font = Enum.Font.GothamBold
+        RankLbl.Font = HubTheme.fontBold
         RankLbl.TextSize = 11
         RankLbl.TextXAlignment = Enum.TextXAlignment.Left
         RankLbl.Parent = InfoRow
@@ -1420,7 +1493,7 @@ local function refreshHistoryUI(historyData, usersData)
         ExecNameLbl.BackgroundTransparency = 1
         ExecNameLbl.Text = "⚙️ " .. item.name
         ExecNameLbl.TextColor3 = Color3.fromRGB(242, 243, 245)
-        ExecNameLbl.Font = Enum.Font.GothamBold
+        ExecNameLbl.Font = HubTheme.fontBold
         ExecNameLbl.TextSize = 12
         ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
         ExecNameLbl.Parent = InfoRow
@@ -1431,7 +1504,7 @@ local function refreshHistoryUI(historyData, usersData)
         ShareLbl.BackgroundTransparency = 1
         ShareLbl.Text = string.format("%d users  •  %s", item.count, sharePctText)
         ShareLbl.TextColor3 = Color3.fromRGB(219, 222, 225)
-        ShareLbl.Font = Enum.Font.GothamSemibold
+        ShareLbl.Font = HubTheme.fontSemibold
         ShareLbl.TextSize = 11
         ShareLbl.TextXAlignment = Enum.TextXAlignment.Right
         ShareLbl.Parent = InfoRow
@@ -1463,7 +1536,7 @@ local function refreshHistoryUI(historyData, usersData)
     SecTitle2.BackgroundTransparency = 1
     SecTitle2.Text = "🎮 TOP GAMES ACROSS NETWORK"
     SecTitle2.TextColor3 = Color3.fromRGB(148, 155, 164)
-    SecTitle2.Font = Enum.Font.GothamBold
+    SecTitle2.Font = HubTheme.fontBold
     SecTitle2.TextSize = 10
     SecTitle2.TextXAlignment = Enum.TextXAlignment.Left
     SecTitle2.Parent = SectionHeader2
@@ -1474,7 +1547,7 @@ local function refreshHistoryUI(historyData, usersData)
 
         local GCard = Instance.new("Frame")
         GCard.Size = UDim2.new(1, -6, 0, 42)
-        GCard.BackgroundColor3 = Color3.fromRGB(28, 30, 34)
+        GCard.BackgroundColor3 = HubTheme.panelBg
         GCard.BorderSizePixel = 0
         GCard.Parent = ChartScroller
         Instance.new("UICorner", GCard).CornerRadius = UDim.new(0, 6)
@@ -1485,7 +1558,7 @@ local function refreshHistoryUI(historyData, usersData)
         GName.BackgroundTransparency = 1
         GName.Text = "🎮 " .. g.name
         GName.TextColor3 = Color3.fromRGB(242, 243, 245)
-        GName.Font = Enum.Font.GothamSemibold
+        GName.Font = HubTheme.fontSemibold
         GName.TextSize = 11
         GName.TextXAlignment = Enum.TextXAlignment.Left
         GName.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1497,7 +1570,7 @@ local function refreshHistoryUI(historyData, usersData)
         GCount.BackgroundTransparency = 1
         GCount.Text = tostring(g.count) .. " active players"
         GCount.TextColor3 = Color3.fromRGB(120, 125, 134)
-        GCount.Font = Enum.Font.Gotham
+        GCount.Font = HubTheme.font
         GCount.TextSize = 10
         GCount.TextXAlignment = Enum.TextXAlignment.Right
         GCount.Parent = GCard
@@ -1519,7 +1592,7 @@ local function refreshHistoryUI(historyData, usersData)
     end
 
     if currentHistorySubTab == "chart" then
-        TabChartBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+        TabChartBtn.BackgroundColor3 = HubTheme.accent
         TabChartBtn.BackgroundTransparency = 0
         TabChartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         TabLogBtn.BackgroundTransparency = 1
@@ -1528,7 +1601,7 @@ local function refreshHistoryUI(historyData, usersData)
         HistoryScroller.Visible = false
         ChartScroller.Visible = true
     else
-        TabLogBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+        TabLogBtn.BackgroundColor3 = HubTheme.accent
         TabLogBtn.BackgroundTransparency = 0
         TabLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         TabChartBtn.BackgroundTransparency = 1
@@ -1541,7 +1614,7 @@ end
 
 TabLogBtn.MouseButton1Click:Connect(function()
     currentHistorySubTab = "log"
-    TabLogBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    TabLogBtn.BackgroundColor3 = HubTheme.accent
     TabLogBtn.BackgroundTransparency = 0
     TabLogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabChartBtn.BackgroundTransparency = 1
@@ -1554,7 +1627,7 @@ end)
 
 TabChartBtn.MouseButton1Click:Connect(function()
     currentHistorySubTab = "chart"
-    TabChartBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    TabChartBtn.BackgroundColor3 = HubTheme.accent
     TabChartBtn.BackgroundTransparency = 0
     TabChartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabLogBtn.BackgroundTransparency = 1
@@ -1574,7 +1647,7 @@ ExecPanelFrame.Parent = ViewContainer
 
 local TargetScroller = Instance.new("ScrollingFrame")
 TargetScroller.Size = UDim2.new(0, 200, 1, 0)
-TargetScroller.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+TargetScroller.BackgroundColor3 = HubTheme.sidebarBg
 TargetScroller.BorderSizePixel = 0
 TargetScroller.ScrollBarThickness = 4
 TargetScroller.Parent = ExecPanelFrame
@@ -1598,7 +1671,7 @@ do
     local panel = Instance.new("Frame")
     panel.Size = UDim2.new(1, -210, 1, 0)
     panel.Position = UDim2.new(0, 210, 0, 0)
-    panel.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+    panel.BackgroundColor3 = HubTheme.cardBg
     panel.BorderSizePixel = 0
     panel.Parent = ExecPanelFrame
     Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 6)
@@ -1613,37 +1686,37 @@ do
     ActiveTargetTitle.BackgroundTransparency = 1
     ActiveTargetTitle.Text = "Selected Target: none"
     ActiveTargetTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ActiveTargetTitle.Font = Enum.Font.GothamBold
+    ActiveTargetTitle.Font = HubTheme.fontBold
     ActiveTargetTitle.TextSize = 13
     ActiveTargetTitle.TextXAlignment = Enum.TextXAlignment.Left
     ActiveTargetTitle.Parent = topAction
 
     BringBtn.Size = UDim2.new(0, 115, 0, 28)
     BringBtn.Position = UDim2.new(0, 10, 0, 35)
-    BringBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    BringBtn.BackgroundColor3 = HubTheme.accent
     BringBtn.Text = "Bring User (Server)"
     BringBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    BringBtn.Font = Enum.Font.GothamBold
+    BringBtn.Font = HubTheme.fontBold
     BringBtn.TextSize = 10
     BringBtn.Parent = topAction
     Instance.new("UICorner", BringBtn).CornerRadius = UDim.new(0, 4)
 
     TeleportToMeBtn.Size = UDim2.new(1, -145, 0, 28)
     TeleportToMeBtn.Position = UDim2.new(0, 135, 0, 35)
-    TeleportToMeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    TeleportToMeBtn.BackgroundColor3 = HubTheme.green
     TeleportToMeBtn.Text = "Teleport User to Me"
     TeleportToMeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TeleportToMeBtn.Font = Enum.Font.GothamBold
+    TeleportToMeBtn.Font = HubTheme.fontBold
     TeleportToMeBtn.TextSize = 10
     TeleportToMeBtn.Parent = topAction
     Instance.new("UICorner", TeleportToMeBtn).CornerRadius = UDim.new(0, 4)
 
     RemoteKillBtn.Size = UDim2.new(0, 115, 0, 28)
     RemoteKillBtn.Position = UDim2.new(0, 10, 0, 70)
-    RemoteKillBtn.BackgroundColor3 = Color3.fromRGB(242, 63, 67)
+    RemoteKillBtn.BackgroundColor3 = HubTheme.red
     RemoteKillBtn.Text = "Remote Kill"
     RemoteKillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RemoteKillBtn.Font = Enum.Font.GothamBold
+    RemoteKillBtn.Font = HubTheme.fontBold
     RemoteKillBtn.TextSize = 11
     RemoteKillBtn.Parent = topAction
     Instance.new("UICorner", RemoteKillBtn).CornerRadius = UDim.new(0, 4)
@@ -1653,7 +1726,7 @@ do
     RemoteExplodeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
     RemoteExplodeBtn.Text = "Remote Explode"
     RemoteExplodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RemoteExplodeBtn.Font = Enum.Font.GothamBold
+    RemoteExplodeBtn.Font = HubTheme.fontBold
     RemoteExplodeBtn.TextSize = 11
     RemoteExplodeBtn.Parent = topAction
     Instance.new("UICorner", RemoteExplodeBtn).CornerRadius = UDim.new(0, 4)
@@ -1664,7 +1737,7 @@ do
     envLbl.BackgroundTransparency = 1
     envLbl.Text = "Remote Environment Executor"
     envLbl.TextColor3 = Color3.fromRGB(181, 186, 193)
-    envLbl.Font = Enum.Font.GothamBold
+    envLbl.Font = HubTheme.fontBold
     envLbl.TextSize = 11
     envLbl.TextXAlignment = Enum.TextXAlignment.Left
     envLbl.Parent = topAction
@@ -1695,10 +1768,10 @@ do
 
     RemoteExecuteCodeBtn.Size = UDim2.new(1, -20, 0, 32)
     RemoteExecuteCodeBtn.Position = UDim2.new(0, 10, 1, -40)
-    RemoteExecuteCodeBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    RemoteExecuteCodeBtn.BackgroundColor3 = HubTheme.green
     RemoteExecuteCodeBtn.Text = "Deploy Cross-Game Execution String"
     RemoteExecuteCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RemoteExecuteCodeBtn.Font = Enum.Font.GothamBold
+    RemoteExecuteCodeBtn.Font = HubTheme.fontBold
     RemoteExecuteCodeBtn.TextSize = 12
     RemoteExecuteCodeBtn.Parent = panel
     Instance.new("UICorner", RemoteExecuteCodeBtn).CornerRadius = UDim.new(0, 4)
@@ -1708,7 +1781,7 @@ local ProfileModal = Instance.new("Frame")
 ProfileModal.Name = "UserProfileModal"
 ProfileModal.Size = UDim2.new(0, 390, 0, 345)
 ProfileModal.Position = UDim2.new(0.5, -195, 0.5, -172)
-ProfileModal.BackgroundColor3 = Color3.fromRGB(26, 27, 31)
+ProfileModal.BackgroundColor3 = HubTheme.panelBg
 ProfileModal.BorderSizePixel = 0
 ProfileModal.Visible = false
 ProfileModal.ZIndex = 50
@@ -1726,7 +1799,7 @@ do
     closeBtn.BackgroundTransparency = 1
     closeBtn.Text = "X"
     closeBtn.TextColor3 = Color3.fromRGB(181, 186, 193)
-    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Font = HubTheme.fontBold
     closeBtn.TextSize = 14
     closeBtn.ZIndex = 52
     closeBtn.Parent = ProfileModal
@@ -1736,7 +1809,7 @@ end
 local ProfileAvatar = Instance.new("ImageLabel")
 ProfileAvatar.Size = UDim2.new(0, 56, 0, 56)
 ProfileAvatar.Position = UDim2.new(0, 16, 0, 16)
-ProfileAvatar.BackgroundColor3 = Color3.fromRGB(35, 37, 42)
+ProfileAvatar.BackgroundColor3 = HubTheme.cardBg
 ProfileAvatar.BorderSizePixel = 0
 ProfileAvatar.ZIndex = 51
 ProfileAvatar.Parent = ProfileModal
@@ -1761,7 +1834,7 @@ do
     ProfileName.Size = UDim2.new(0, 0, 1, 0)
     ProfileName.AutomaticSize = Enum.AutomaticSize.X
     ProfileName.BackgroundTransparency = 1
-    ProfileName.Font = Enum.Font.GothamBold
+    ProfileName.Font = HubTheme.fontBold
     ProfileName.TextSize = 14
     ProfileName.TextXAlignment = Enum.TextXAlignment.Left
     ProfileName.TextColor3 = Color3.fromRGB(242, 243, 245)
@@ -1770,7 +1843,7 @@ do
 
     ProfileExecBadge.Size = UDim2.new(0, 0, 0, 18)
     ProfileExecBadge.AutomaticSize = Enum.AutomaticSize.X
-    ProfileExecBadge.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    ProfileExecBadge.BackgroundColor3 = HubTheme.green
     ProfileExecBadge.BorderSizePixel = 0
     ProfileExecBadge.ZIndex = 51
     ProfileExecBadge.Parent = nameC
@@ -1779,7 +1852,7 @@ do
     ProfileExecText.Size = UDim2.new(0, 0, 1, 0)
     ProfileExecText.AutomaticSize = Enum.AutomaticSize.X
     ProfileExecText.BackgroundTransparency = 1
-    ProfileExecText.Font = Enum.Font.GothamBold
+    ProfileExecText.Font = HubTheme.fontBold
     ProfileExecText.TextSize = 10
     ProfileExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
     ProfileExecText.Text = " ⚙️ Exec "
@@ -1791,7 +1864,7 @@ local ProfileRole = Instance.new("TextLabel")
 ProfileRole.Size = UDim2.new(1, -120, 0, 18)
 ProfileRole.Position = UDim2.new(0, 82, 0, 40)
 ProfileRole.BackgroundTransparency = 1
-ProfileRole.Font = Enum.Font.GothamSemibold
+ProfileRole.Font = HubTheme.fontSemibold
 ProfileRole.TextSize = 11
 ProfileRole.TextXAlignment = Enum.TextXAlignment.Left
 ProfileRole.TextColor3 = Color3.fromRGB(148, 155, 164)
@@ -1812,7 +1885,7 @@ do
     ProfileDetailsText.Size = UDim2.new(1, -16, 1, -6)
     ProfileDetailsText.Position = UDim2.new(0, 8, 0, 3)
     ProfileDetailsText.BackgroundTransparency = 1
-    ProfileDetailsText.Font = Enum.Font.Gotham
+    ProfileDetailsText.Font = HubTheme.font
     ProfileDetailsText.TextSize = 11
     ProfileDetailsText.TextXAlignment = Enum.TextXAlignment.Left
     ProfileDetailsText.TextYAlignment = Enum.TextYAlignment.Top
@@ -1835,7 +1908,7 @@ do
     lbl.Size = UDim2.new(0, 84, 1, 0)
     lbl.Position = UDim2.new(0, 0, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamBold
+    lbl.Font = HubTheme.fontBold
     lbl.TextSize = 9
     lbl.TextColor3 = Color3.fromRGB(148, 155, 164)
     lbl.Text = "EXECUTORES:"
@@ -1848,7 +1921,7 @@ do
     ProfileUsedExecsScroller.BackgroundTransparency = 1
     ProfileUsedExecsScroller.BorderSizePixel = 0
     ProfileUsedExecsScroller.ScrollBarThickness = 2
-    ProfileUsedExecsScroller.ScrollBarImageColor3 = Color3.fromRGB(88, 101, 242)
+    ProfileUsedExecsScroller.ScrollBarImageColor3 = HubTheme.accent
     ProfileUsedExecsScroller.AutomaticCanvasSize = Enum.AutomaticSize.X
     ProfileUsedExecsScroller.ScrollingDirection = Enum.ScrollingDirection.X
     ProfileUsedExecsScroller.ZIndex = 52
@@ -1879,10 +1952,10 @@ do
 
     ProfileBtnMention.Size = UDim2.new(0.5, -4, 0, 32)
     ProfileBtnMention.Position = UDim2.new(0, 0, 0, 0)
-    ProfileBtnMention.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    ProfileBtnMention.BackgroundColor3 = HubTheme.accent
     ProfileBtnMention.Text = "💬 Mention in Chat"
     ProfileBtnMention.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ProfileBtnMention.Font = Enum.Font.GothamBold
+    ProfileBtnMention.Font = HubTheme.fontBold
     ProfileBtnMention.TextSize = 11
     ProfileBtnMention.ZIndex = 52
     ProfileBtnMention.Parent = btnsF
@@ -1890,10 +1963,10 @@ do
 
     ProfileBtnAction.Size = UDim2.new(0.5, -4, 0, 32)
     ProfileBtnAction.Position = UDim2.new(0.5, 4, 0, 0)
-    ProfileBtnAction.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+    ProfileBtnAction.BackgroundColor3 = HubTheme.green
     ProfileBtnAction.Text = "⚡ Teleport to User"
     ProfileBtnAction.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ProfileBtnAction.Font = Enum.Font.GothamBold
+    ProfileBtnAction.Font = HubTheme.fontBold
     ProfileBtnAction.TextSize = 11
     ProfileBtnAction.ZIndex = 52
     ProfileBtnAction.Parent = btnsF
@@ -1904,7 +1977,7 @@ do
     ProfileBtnSpectate.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
     ProfileBtnSpectate.Text = "👁️ Spectate"
     ProfileBtnSpectate.TextColor3 = Color3.fromRGB(220, 222, 226)
-    ProfileBtnSpectate.Font = Enum.Font.GothamBold
+    ProfileBtnSpectate.Font = HubTheme.fontBold
     ProfileBtnSpectate.TextSize = 11
     ProfileBtnSpectate.ZIndex = 52
     ProfileBtnSpectate.Parent = btnsF
@@ -1915,7 +1988,7 @@ do
     ProfileBtnCopyLink.BackgroundColor3 = Color3.fromRGB(43, 45, 49)
     ProfileBtnCopyLink.Text = "🔗 Copy Profile URL"
     ProfileBtnCopyLink.TextColor3 = Color3.fromRGB(220, 222, 226)
-    ProfileBtnCopyLink.Font = Enum.Font.GothamBold
+    ProfileBtnCopyLink.Font = HubTheme.fontBold
     ProfileBtnCopyLink.TextSize = 11
     ProfileBtnCopyLink.ZIndex = 52
     ProfileBtnCopyLink.Parent = btnsF
@@ -1927,7 +2000,7 @@ do
     backBtn.BackgroundTransparency = 1
     backBtn.Text = "Close Profile"
     backBtn.TextColor3 = Color3.fromRGB(148, 155, 164)
-    backBtn.Font = Enum.Font.Gotham
+    backBtn.Font = HubTheme.font
     backBtn.TextSize = 11
     backBtn.ZIndex = 52
     backBtn.Parent = btnsF
@@ -1953,13 +2026,13 @@ ProfileBtnAction.MouseButton1Click:Connect(function()
     if inSameServer and uName ~= Username then
         local p = Players:FindFirstChild(uName)
         if p and teleportToPlayerInServer(p) then
-            showToast("Teleported to " .. uName, Color3.fromRGB(35, 165, 90))
+            showToast("Teleported to " .. uName, HubTheme.green)
         else
-            showToast("Player not found in server", Color3.fromRGB(237, 66, 69))
+            showToast("Player not found in server", HubTheme.red)
         end
     elseif isUserOnline(currentProfileUser.updated_at) and uName ~= Username then
         if currentProfileUser.place_id and currentProfileUser.job_id then
-            showToast("Connecting to " .. uName .. "'s server...", Color3.fromRGB(35, 165, 90))
+            showToast("Connecting to " .. uName .. "'s server...", HubTheme.green)
             TeleportService:TeleportToPlaceInstance(currentProfileUser.place_id, currentProfileUser.job_id, LocalPlayer)
         end
     end
@@ -1973,9 +2046,9 @@ ProfileBtnSpectate.MouseButton1Click:Connect(function()
         SpectateText.Text = "👁️ Spectating: " .. uName
         SpectateHud.Visible = true
         ProfileModal.Visible = false
-        showToast("Spectating " .. uName, Color3.fromRGB(88, 101, 242))
+        showToast("Spectating " .. uName, HubTheme.accent)
     else
-        showToast("Could not spectate target", Color3.fromRGB(237, 66, 69))
+        showToast("Could not spectate target", HubTheme.red)
     end
 end)
 
@@ -1984,9 +2057,9 @@ ProfileBtnCopyLink.MouseButton1Click:Connect(function()
     local uId = tonumber(currentProfileUser.user_id) or 0
     local profileUrl = "https://www.roblox.com/users/" .. tostring(uId > 0 and uId or "") .. "/profile"
     if copyToClipboard(profileUrl) then
-        showToast("Roblox profile link copied!", Color3.fromRGB(35, 165, 90))
+        showToast("Roblox profile link copied!", HubTheme.green)
     else
-        showToast("User ID: " .. tostring(uId), Color3.fromRGB(88, 101, 242))
+        showToast("User ID: " .. tostring(uId), HubTheme.accent)
     end
 end)
 
@@ -2013,10 +2086,10 @@ openUserProfile = function(user)
         ProfileRole.TextColor3 = Color3.fromRGB(168, 85, 247)
     elseif uName == Username then
         ProfileRole.Text = "👤 You (Current Client)"
-        ProfileRole.TextColor3 = Color3.fromRGB(88, 101, 242)
+        ProfileRole.TextColor3 = HubTheme.accent
     else
         ProfileRole.Text = isOnline and "🟢 Community Member" or "⚪ Offline User"
-        ProfileRole.TextColor3 = isOnline and Color3.fromRGB(35, 165, 90) or Color3.fromRGB(148, 155, 164)
+        ProfileRole.TextColor3 = isOnline and HubTheme.green or Color3.fromRGB(148, 155, 164)
     end
 
     for _, ch in ipairs(ProfileUsedExecsScroller:GetChildren()) do
@@ -2042,7 +2115,7 @@ openUserProfile = function(user)
         pillText.Size = UDim2.new(0, 0, 1, 0)
         pillText.AutomaticSize = Enum.AutomaticSize.X
         pillText.BackgroundTransparency = 1
-        pillText.Font = Enum.Font.GothamBold
+        pillText.Font = HubTheme.fontBold
         pillText.TextSize = 9
         pillText.TextColor3 = Color3.fromRGB(255, 255, 255)
         local countStr = it.count > 1 and (" (" .. it.count .. "x)") or ""
@@ -2070,13 +2143,13 @@ openUserProfile = function(user)
 
     if inSameServer and uName ~= Username then
         ProfileBtnAction.Text = "⚡ TP to Player"
-        ProfileBtnAction.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+        ProfileBtnAction.BackgroundColor3 = HubTheme.accent
         ProfileBtnAction.Visible = true
         ProfileBtnSpectate.Visible = true
         ProfileBtnSpectate.Text = "👁️ Spectate"
     elseif isOnline and uName ~= Username then
         ProfileBtnAction.Text = "🚀 Join Game"
-        ProfileBtnAction.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+        ProfileBtnAction.BackgroundColor3 = HubTheme.green
         ProfileBtnAction.Visible = true
         ProfileBtnSpectate.Visible = false
     else
@@ -2099,12 +2172,12 @@ selectTab = function(tab)
     UsersView.Visible = false; ChatView.Visible = false; HistoryView.Visible = false; ExecPanelFrame.Visible = false; ProfileModal.Visible = false
 
     if tab == "users" then
-        ChannelUsers.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelUsers.BackgroundTransparency = 0; ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); UsersView.Visible = true
+        ChannelUsers.BackgroundColor3 = HubTheme.cardHover; ChannelUsers.BackgroundTransparency = 0; ChannelUsers.TextColor3 = Color3.fromRGB(255, 255, 255); UsersView.Visible = true
         if pendingUsersRedraw or lastUsersSignature == "" then
             refreshUIList(cachedUsersData)
         end
     elseif tab == "server" then
-        ChannelServerChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelServerChat.BackgroundTransparency = 0; ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ChannelServerChat.BackgroundColor3 = HubTheme.cardHover; ChannelServerChat.BackgroundTransparency = 0; ChannelServerChat.TextColor3 = Color3.fromRGB(255, 255, 255)
         TextBox.PlaceholderText = "Message #server-chat... (Press Enter)"
         ChatChannelTitle.Text = "🎮 # server-chat"
         ChatChannelDesc.Text = "Local server chat • Job: " .. string.sub(JobId, 1, 8) .. "..."
@@ -2115,7 +2188,7 @@ selectTab = function(tab)
         end
         task.spawn(function() if fetchData then fetchData() end end)
     elseif tab == "global" then
-        ChannelGlobalChat.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelGlobalChat.BackgroundTransparency = 0; ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ChannelGlobalChat.BackgroundColor3 = HubTheme.cardHover; ChannelGlobalChat.BackgroundTransparency = 0; ChannelGlobalChat.TextColor3 = Color3.fromRGB(255, 255, 255)
         TextBox.PlaceholderText = "Message #global-cross-chat... (Press Enter)"
         ChatChannelTitle.Text = "💬 # global-cross-chat"
         ChatChannelDesc.Text = "Cross-game network communication"
@@ -2126,11 +2199,11 @@ selectTab = function(tab)
         end
         task.spawn(function() if fetchData then fetchData() end end)
     elseif tab == "history" then
-        ChannelHistory.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelHistory.BackgroundTransparency = 0; ChannelHistory.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ChannelHistory.BackgroundColor3 = HubTheme.cardHover; ChannelHistory.BackgroundTransparency = 0; ChannelHistory.TextColor3 = Color3.fromRGB(255, 255, 255)
         HistoryView.Visible = true
         refreshHistoryUI(cachedHistoryData, cachedUsersData)
     elseif tab == "exec" then
-        ChannelExecPanel.BackgroundColor3 = Color3.fromRGB(53, 55, 60); ChannelExecPanel.BackgroundTransparency = 0; ChannelExecPanel.TextColor3 = Color3.fromRGB(255, 255, 255); ExecPanelFrame.Visible = true
+        ChannelExecPanel.BackgroundColor3 = HubTheme.cardHover; ChannelExecPanel.BackgroundTransparency = 0; ChannelExecPanel.TextColor3 = Color3.fromRGB(255, 255, 255); ExecPanelFrame.Visible = true
     end
 end
 
@@ -2151,7 +2224,7 @@ local function createCategoryHeader(titleText, color)
     Label.BackgroundTransparency = 1
     Label.Text = string.upper(titleText)
     Label.TextColor3 = color or Color3.fromRGB(148, 155, 164)
-    Label.Font = Enum.Font.GothamBold
+    Label.Font = HubTheme.fontBold
     Label.TextSize = 10
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Header
@@ -2167,7 +2240,7 @@ local function createUserRow(user, online)
     local inSameServer = (user.job_id == JobId)
     local PlayerRow = Instance.new("Frame")
     PlayerRow.Size = UDim2.new(1, -6, 0, 48)
-    PlayerRow.BackgroundColor3 = online and Color3.fromRGB(38, 40, 45) or Color3.fromRGB(30, 31, 35)
+    PlayerRow.BackgroundColor3 = online and Color3.fromRGB(38, 40, 45) or HubTheme.windowBg
     PlayerRow.BorderSizePixel = 0
     PlayerRow.Parent = UsersScroller
     Instance.new("UICorner", PlayerRow).CornerRadius = UDim.new(0, 6)
@@ -2175,7 +2248,7 @@ local function createUserRow(user, online)
     local AvatarImg = Instance.new("ImageButton")
     AvatarImg.Size = UDim2.new(0, 34, 0, 34)
     AvatarImg.Position = UDim2.new(0, 8, 0, 7)
-    AvatarImg.BackgroundColor3 = Color3.fromRGB(30, 31, 35)
+    AvatarImg.BackgroundColor3 = HubTheme.windowBg
     AvatarImg.BorderSizePixel = 0
     AvatarImg.Image = getAvatarThumb(uId, uName)
     AvatarImg.Parent = PlayerRow
@@ -2184,7 +2257,7 @@ local function createUserRow(user, online)
     local StatusDot = Instance.new("Frame")
     StatusDot.Size = UDim2.new(0, 9, 0, 9)
     StatusDot.Position = UDim2.new(1, -8, 1, -8)
-    StatusDot.BackgroundColor3 = online and Color3.fromRGB(35, 165, 90) or Color3.fromRGB(120, 125, 134)
+    StatusDot.BackgroundColor3 = online and HubTheme.green or Color3.fromRGB(120, 125, 134)
     StatusDot.BorderSizePixel = 0
     StatusDot.Parent = AvatarImg
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
@@ -2208,7 +2281,7 @@ local function createUserRow(user, online)
     NameLabel.Size = UDim2.new(0, 0, 1, 0)
     NameLabel.AutomaticSize = Enum.AutomaticSize.X
     NameLabel.BackgroundTransparency = 1
-    NameLabel.Font = Enum.Font.GothamSemibold
+    NameLabel.Font = HubTheme.fontSemibold
     NameLabel.TextSize = 13
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -2219,7 +2292,7 @@ local function createUserRow(user, online)
         NameLabel.TextColor3 = Color3.fromRGB(168, 85, 247)
         NameLabel.Text = "🛡️ " .. uName
     elseif uName == Username then
-        NameLabel.TextColor3 = Color3.fromRGB(88, 101, 242)
+        NameLabel.TextColor3 = HubTheme.accent
         NameLabel.Text = uName .. " (You)"
     else
         NameLabel.TextColor3 = online and Color3.fromRGB(242, 243, 245) or Color3.fromRGB(130, 135, 145)
@@ -2239,7 +2312,7 @@ local function createUserRow(user, online)
     RowExecText.Size = UDim2.new(0, 0, 1, 0)
     RowExecText.AutomaticSize = Enum.AutomaticSize.X
     RowExecText.BackgroundTransparency = 1
-    RowExecText.Font = Enum.Font.GothamBold
+    RowExecText.Font = HubTheme.fontBold
     RowExecText.TextSize = 9
     RowExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
     RowExecText.Text = " ⚙️ " .. uExec .. " "
@@ -2249,7 +2322,7 @@ local function createUserRow(user, online)
     Subtitle.Size = UDim2.new(0.55, -40, 0, 16)
     Subtitle.Position = UDim2.new(0, 50, 0, 25)
     Subtitle.BackgroundTransparency = 1
-    Subtitle.Font = Enum.Font.Gotham
+    Subtitle.Font = HubTheme.font
     Subtitle.TextSize = 10
     Subtitle.TextXAlignment = Enum.TextXAlignment.Left
     Subtitle.TextTruncate = Enum.TextTruncate.AtEnd
@@ -2257,7 +2330,7 @@ local function createUserRow(user, online)
     if online then
         if inSameServer then
             Subtitle.Text = "⚡ In this server! • Server Job: " .. string.sub(user.job_id or "none", 1, 8)
-            Subtitle.TextColor3 = Color3.fromRGB(88, 101, 242)
+            Subtitle.TextColor3 = HubTheme.accent
         else
             local usedList = getUserExecutorsList(uName)
             if #usedList > 1 then
@@ -2280,19 +2353,19 @@ local function createUserRow(user, online)
             local TpBtn = Instance.new("TextButton")
             TpBtn.Size = UDim2.new(0, 50, 0, 26)
             TpBtn.Position = UDim2.new(1, -115, 0, 11)
-            TpBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+            TpBtn.BackgroundColor3 = HubTheme.accent
             TpBtn.Text = "⚡ TP"
             TpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TpBtn.Font = Enum.Font.GothamBold
+            TpBtn.Font = HubTheme.fontBold
             TpBtn.TextSize = 10
             TpBtn.Parent = PlayerRow
             Instance.new("UICorner", TpBtn).CornerRadius = UDim.new(0, 4)
             TpBtn.MouseButton1Click:Connect(function()
                 local p = Players:FindFirstChild(uName)
                 if p and teleportToPlayerInServer(p) then
-                    showToast("Teleported to " .. uName, Color3.fromRGB(35, 165, 90))
+                    showToast("Teleported to " .. uName, HubTheme.green)
                 else
-                    showToast("Player not found in server", Color3.fromRGB(237, 66, 69))
+                    showToast("Player not found in server", HubTheme.red)
                 end
             end)
 
@@ -2302,7 +2375,7 @@ local function createUserRow(user, online)
             SpecBtn.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
             SpecBtn.Text = "👁️ Watch"
             SpecBtn.TextColor3 = Color3.fromRGB(220, 222, 226)
-            SpecBtn.Font = Enum.Font.GothamBold
+            SpecBtn.Font = HubTheme.fontBold
             SpecBtn.TextSize = 10
             SpecBtn.Parent = PlayerRow
             Instance.new("UICorner", SpecBtn).CornerRadius = UDim.new(0, 4)
@@ -2311,25 +2384,25 @@ local function createUserRow(user, online)
                 if p and spectatePlayer(p) then
                     SpectateText.Text = "👁️ Spectating: " .. uName
                     SpectateHud.Visible = true
-                    showToast("Spectating " .. uName, Color3.fromRGB(88, 101, 242))
+                    showToast("Spectating " .. uName, HubTheme.accent)
                 else
-                    showToast("Could not spectate", Color3.fromRGB(237, 66, 69))
+                    showToast("Could not spectate", HubTheme.red)
                 end
             end)
         else
             local JoinBtn = Instance.new("TextButton")
             JoinBtn.Size = UDim2.new(0, 68, 0, 26)
             JoinBtn.Position = UDim2.new(1, -78, 0, 11)
-            JoinBtn.BackgroundColor3 = Color3.fromRGB(35, 165, 90)
+            JoinBtn.BackgroundColor3 = HubTheme.green
             JoinBtn.Text = "🚀 Join"
             JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            JoinBtn.Font = Enum.Font.GothamBold
+            JoinBtn.Font = HubTheme.fontBold
             JoinBtn.TextSize = 10
             JoinBtn.Parent = PlayerRow
             Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 4)
             JoinBtn.MouseButton1Click:Connect(function()
                 if user.place_id and user.job_id then
-                    showToast("Teleporting to " .. uName .. "...", Color3.fromRGB(35, 165, 90))
+                    showToast("Teleporting to " .. uName .. "...", HubTheme.green)
                     TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
                 end
             end)
@@ -2396,7 +2469,7 @@ local function refreshUIList(data)
     OnlineCounterText.Text = string.format("🟢 %d Online • %d Total", #onlineList, #onlineList + #offlineList)
     ChannelUsers.Text = string.format("   👥  users-network  (%d)", #onlineList)
 
-    createCategoryHeader("Online Network — " .. #onlineList, Color3.fromRGB(35, 165, 90))
+    createCategoryHeader("Online Network — " .. #onlineList, HubTheme.green)
     for _, user in ipairs(onlineList) do
         createUserRow(user, true)
 
@@ -2404,10 +2477,10 @@ local function refreshUIList(data)
         if uName ~= Username then
             local TargetSelectorBtn = Instance.new("TextButton")
             TargetSelectorBtn.Size = UDim2.new(1, -10, 0, 34)
-            TargetSelectorBtn.BackgroundColor3 = (SelectedTarget == uName) and Color3.fromRGB(53, 55, 60) or Color3.fromRGB(35, 37, 42)
+            TargetSelectorBtn.BackgroundColor3 = (SelectedTarget == uName) and HubTheme.cardHover or HubTheme.cardBg
             TargetSelectorBtn.Text = "      🟢 " .. uName
             TargetSelectorBtn.TextColor3 = Color3.fromRGB(219, 222, 225)
-            TargetSelectorBtn.Font = Enum.Font.GothamSemibold
+            TargetSelectorBtn.Font = HubTheme.fontSemibold
             TargetSelectorBtn.TextSize = 11
             TargetSelectorBtn.TextXAlignment = Enum.TextXAlignment.Left
             TargetSelectorBtn.Parent = TargetScroller
@@ -2425,9 +2498,9 @@ local function refreshUIList(data)
                 SelectedTarget = uName
                 ActiveTargetTitle.Text = "Selected Target: " .. uName
                 for _, btn in ipairs(TargetScroller:GetChildren()) do
-                    if btn:IsA("TextButton") then btn.BackgroundColor3 = Color3.fromRGB(35, 37, 42) end
+                    if btn:IsA("TextButton") then btn.BackgroundColor3 = HubTheme.cardBg end
                 end
-                TargetSelectorBtn.BackgroundColor3 = Color3.fromRGB(53, 55, 60)
+                TargetSelectorBtn.BackgroundColor3 = HubTheme.cardHover
             end)
         end
     end
@@ -2541,7 +2614,7 @@ local function refreshChatUI(messages, adminPool)
         local MsgFrame = Instance.new("Frame")
         MsgFrame.Size = UDim2.new(1, 0, 0, 0)
         MsgFrame.AutomaticSize = Enum.AutomaticSize.Y
-        MsgFrame.BackgroundColor3 = isMentioned and Color3.fromRGB(50, 44, 30) or Color3.fromRGB(35, 37, 42)
+        MsgFrame.BackgroundColor3 = isMentioned and Color3.fromRGB(50, 44, 30) or HubTheme.cardBg
         MsgFrame.BackgroundTransparency = isMentioned and 0.4 or 1
         MsgFrame.BorderSizePixel = 0
         MsgFrame.Parent = ChatScrolling
@@ -2557,7 +2630,7 @@ local function refreshChatUI(messages, adminPool)
             local accent = Instance.new("Frame")
             accent.Size = UDim2.new(0, 3, 1, 0)
             accent.Position = UDim2.new(0, -6, 0, 0)
-            accent.BackgroundColor3 = Color3.fromRGB(250, 166, 26)
+            accent.BackgroundColor3 = HubTheme.yellow
             accent.BorderSizePixel = 0
             accent.Parent = MsgFrame
         end
@@ -2565,7 +2638,7 @@ local function refreshChatUI(messages, adminPool)
         local AvatarBtn = Instance.new("ImageButton")
         AvatarBtn.Size = UDim2.new(0, 32, 0, 32)
         AvatarBtn.Position = UDim2.new(0, 0, 0, 0)
-        AvatarBtn.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+        AvatarBtn.BackgroundColor3 = HubTheme.sidebarBg
         AvatarBtn.BorderSizePixel = 0
         AvatarBtn.Image = getAvatarThumb(cachedUserIds[uName], uName)
         AvatarBtn.Parent = MsgFrame
@@ -2617,7 +2690,7 @@ local function refreshChatUI(messages, adminPool)
         NameBtn.Size = UDim2.new(0, 0, 1, 0)
         NameBtn.AutomaticSize = Enum.AutomaticSize.X
         NameBtn.BackgroundTransparency = 1
-        NameBtn.Font = Enum.Font.GothamBold
+        NameBtn.Font = HubTheme.fontBold
         NameBtn.TextSize = 12
         NameBtn.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -2625,7 +2698,7 @@ local function refreshChatUI(messages, adminPool)
             NameBtn.TextColor3 = Color3.fromRGB(255, 235, 59)
             NameBtn.Text = "👑 " .. uName
         elseif uName == Username then
-            NameBtn.TextColor3 = Color3.fromRGB(88, 101, 242)
+            NameBtn.TextColor3 = HubTheme.accent
             NameBtn.Text = uName
         else
             NameBtn.TextColor3 = Color3.fromRGB(242, 243, 245)
@@ -2651,7 +2724,7 @@ local function refreshChatUI(messages, adminPool)
         ChatExecText.Size = UDim2.new(0, 0, 1, 0)
         ChatExecText.AutomaticSize = Enum.AutomaticSize.X
         ChatExecText.BackgroundTransparency = 1
-        ChatExecText.Font = Enum.Font.GothamBold
+        ChatExecText.Font = HubTheme.fontBold
         ChatExecText.TextSize = 9
         ChatExecText.TextColor3 = Color3.fromRGB(255, 255, 255)
         ChatExecText.Text = " ⚙️ " .. uExec .. " "
@@ -2664,7 +2737,7 @@ local function refreshChatUI(messages, adminPool)
         TimeLabel.BackgroundTransparency = 1
         TimeLabel.Text = timeStr
         TimeLabel.TextColor3 = Color3.fromRGB(120, 125, 134)
-        TimeLabel.Font = Enum.Font.Gotham
+        TimeLabel.Font = HubTheme.font
         TimeLabel.TextSize = 10
         TimeLabel.Parent = HeaderLine
 
@@ -2673,7 +2746,7 @@ local function refreshChatUI(messages, adminPool)
         MsgText.Position = UDim2.new(0, 0, 0, 20)
         MsgText.AutomaticSize = Enum.AutomaticSize.Y
         MsgText.BackgroundTransparency = 1
-        MsgText.Font = Enum.Font.Gotham
+        MsgText.Font = HubTheme.font
         MsgText.TextSize = 13
         MsgText.TextColor3 = Color3.fromRGB(219, 222, 225)
         MsgText.TextXAlignment = Enum.TextXAlignment.Left
@@ -2763,7 +2836,7 @@ local function sendChatMessage(text)
     local cleanMsg = sanitizeText(text)
     if cleanMsg == "" then return end
     if tick() - lastChatTime < 1.5 then
-        showToast("Sending too fast, please wait...", Color3.fromRGB(237, 66, 69))
+        showToast("Sending too fast, please wait...", HubTheme.red)
         return
     end
     lastChatTime = tick()
@@ -2947,7 +3020,7 @@ BringBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
         _G.CurrentTpTarget = SelectedTarget
         updatePresence()
-        showToast("Dispatched Bring target: " .. SelectedTarget, Color3.fromRGB(88, 101, 242))
+        showToast("Dispatched Bring target: " .. SelectedTarget, HubTheme.accent)
         task.delay(3, function()
             if _G.CurrentTpTarget == SelectedTarget then
                 _G.CurrentTpTarget = "none"
@@ -2976,7 +3049,7 @@ TeleportToMeBtn.MouseButton1Click:Connect(function()
         local payloadClean = HttpService:UrlEncode(code)
         _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
         updatePresence()
-        showToast("Dispatched Teleport To Me: " .. SelectedTarget, Color3.fromRGB(35, 165, 90))
+        showToast("Dispatched Teleport To Me: " .. SelectedTarget, HubTheme.green)
         task.delay(4, function()
             if _G.CurrentActiveEffect:sub(1,7) == "runcode" then
                 _G.CurrentActiveEffect = "none"
@@ -2992,7 +3065,7 @@ RemoteKillBtn.MouseButton1Click:Connect(function()
         _G.CurrentActiveEffect = "kill:" .. SelectedTarget .. ":" .. hash
         runLocalExplosionEffect(SelectedTarget)
         updatePresence()
-        showToast("Dispatched Remote Kill: " .. SelectedTarget, Color3.fromRGB(242, 63, 67))
+        showToast("Dispatched Remote Kill: " .. SelectedTarget, HubTheme.red)
         task.delay(3, function()
             if _G.CurrentActiveEffect:sub(1,4) == "kill" then
                 _G.CurrentActiveEffect = "none"
@@ -3025,7 +3098,7 @@ RemoteExecuteCodeBtn.MouseButton1Click:Connect(function()
 
         _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
         updatePresence()
-        showToast("Deployed Execution String to: " .. SelectedTarget, Color3.fromRGB(35, 165, 90))
+        showToast("Deployed Execution String to: " .. SelectedTarget, HubTheme.green)
 
         task.delay(4, function()
             if _G.CurrentActiveEffect:sub(1,7) == "runcode" then
@@ -3082,7 +3155,7 @@ do
     local minimized = false
 
     ResizeHandle.MouseEnter:Connect(function()
-        ResizeHandle.TextColor3 = Color3.fromRGB(88, 101, 242)
+        ResizeHandle.TextColor3 = HubTheme.accent
     end)
     ResizeHandle.MouseLeave:Connect(function()
         if not resizing then
@@ -3096,7 +3169,7 @@ do
             resizing = true
             resizeStart = Vector2.new(input.Position.X, input.Position.Y)
             startSize = Vector2.new(WindowFrame.AbsoluteSize.X, WindowFrame.AbsoluteSize.Y)
-            ResizeHandle.TextColor3 = Color3.fromRGB(88, 101, 242)
+            ResizeHandle.TextColor3 = HubTheme.accent
         end
     end)
 
@@ -3133,7 +3206,7 @@ end
 SpectateStopBtn.MouseButton1Click:Connect(function()
     stopSpectate()
     SpectateHud.Visible = false
-    showToast("Stopped spectating", Color3.fromRGB(237, 66, 69))
+    showToast("Stopped spectating", HubTheme.red)
 end)
 
 local function cleanupSelf()
