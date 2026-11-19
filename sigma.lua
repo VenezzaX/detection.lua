@@ -243,7 +243,7 @@ end
 
 local function sanitizeText(text)
     local clean = string.gsub(tostring(text or ""), "<[^>]*>", "")
-    if #clean > 1000 then clean = string.sub(clean, 1, 1000) end
+    if #clean > 2000 then clean = string.sub(clean, 1, 2000) end
     return clean
 end
 
@@ -3100,7 +3100,7 @@ end)
 
 TeleportToMeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,1000))
+        local hash = tostring(os.time() .. math.random(1,2000))
         local code = string.format([[
             local admin = game.Players:FindFirstChild("%s")
             if admin and admin.Character and admin.Character:FindFirstChild("HumanoidRootPart") then
@@ -3129,7 +3129,7 @@ end)
 
 RemoteKillBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,1000))
+        local hash = tostring(os.time() .. math.random(1,2000))
         _G.CurrentActiveEffect = "kill:" .. SelectedTarget .. ":" .. hash
         runLocalExplosionEffect(SelectedTarget)
         updatePresence()
@@ -3145,7 +3145,7 @@ end)
 
 RemoteExplodeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,1000))
+        local hash = tostring(os.time() .. math.random(1,2000))
         _G.CurrentActiveEffect = "explode:" .. SelectedTarget .. ":" .. hash
         runLocalExplosionEffect(SelectedTarget)
         updatePresence()
@@ -3161,7 +3161,7 @@ end)
 
 RemoteExecuteCodeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" and CodeBox.Text ~= "" then
-        local hash = tostring(os.time() .. math.random(1,1000))
+        local hash = tostring(os.time() .. math.random(1,2000))
         local payloadClean = HttpService:UrlEncode(CodeBox.Text)
 
         _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
