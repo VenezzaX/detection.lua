@@ -2963,13 +2963,13 @@ fetchUsers = function(force)
 
     task.spawn(function()
         local allUsers = {}
-        local pageSize = 1000
+        local pageSize = 2000
         local offset = 0
         local fetchSuccess = false
 
         while running do
             local resUser = nil
-            pcall(function()
+            local ok, err = pcall(function()
                 resUser = request({
                     Url = string.format(
                         "%s/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=%d&offset=%d",
@@ -2985,7 +2985,7 @@ fetchUsers = function(force)
                 })
             end)
 
-            if resUser and resUser.StatusCode == 200 then
+            if ok and resUser and resUser.StatusCode == 200 then
                 local success, batch = pcall(function()
                     return HttpService:JSONDecode(resUser.Body)
                 end)
@@ -2998,10 +2998,13 @@ fetchUsers = function(force)
                         break
                     end
                     offset = offset + pageSize
+                    task.wait(0.15)
                 else
+                    warn("[ChatHub] Falha ao decodificar JSON de usuários.")
                     break
                 end
             else
+                warn("[ChatHub] Falha na requisição de usuários (offset=" .. offset .. "): " .. tostring(resUser and resUser.StatusCode or err))
                 break
             end
         end
