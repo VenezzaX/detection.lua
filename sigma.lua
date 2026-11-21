@@ -153,11 +153,55 @@ task.spawn(function()
 end)
 
 local function getExecutor()
-    if identifyexecutor then
-        local name = identifyexecutor()
-        return name or "Potassium"
+    local name = nil
+    if type(identifyexecutor) == "function" then
+        local ok, res = pcall(identifyexecutor)
+        if ok and res and type(res) == "string" and res ~= "" then
+            name = res
+        end
     end
-    return "Potassium"
+    if not name and type(getexecutorname) == "function" then
+        local ok, res = pcall(getexecutorname)
+        if ok and res and type(res) == "string" and res ~= "" then
+            name = res
+        end
+    end
+    if not name and type(whoname) == "function" then
+        local ok, res = pcall(whoname)
+        if ok and res and type(res) == "string" and res ~= "" then
+            name = res
+        end
+    end
+
+    local genv = (type(getgenv) == "function" and getgenv()) or _G
+    if not name or name == "Unknown" or name == "Potassium" then
+        if genv.volt or genv.VOLT or genv.Volt then name = "Volt"
+        elseif genv.potassium or genv.POTASSIUM or genv.Potassium then name = "Potassium"
+        elseif genv.wave or genv.WAVE or genv.Wave then name = "Wave"
+        elseif genv.SynapseZ or genv.synapsez or genv.Synapse_Z or genv.syn_z then name = "SynapseZ"
+        elseif genv.lucid or genv.LUCID or genv.Lucid then name = "Lucid"
+        elseif genv.lynx or genv.LYNX or genv.Lynx then name = "Lynx"
+        elseif genv.real or genv.REAL or genv.Real then name = "Real"
+        elseif genv.madium or genv.MADIUM or genv.Madium then name = "Madium"
+        elseif genv.atomic or genv.ATOMIC or genv.Atomic then name = "Atomic"
+        elseif genv.isaeva or genv.ISAEVA or genv.Isaeva then name = "Isaeva"
+        elseif genv.volcano or genv.VOLCANO or genv.Volcano then name = "Volcano"
+        elseif genv.athena or genv.ATHENA or genv.Athena then name = "Athena"
+        elseif genv.velocity or genv.VELOCITY or genv.Velocity then name = "Velocity"
+        elseif genv.SIRHURT_V4 or genv.sirhurt or genv.SirHurt then name = "SirHurt"
+        elseif genv.xeno or genv.XENO or genv.Xeno then name = "Xeno"
+        elseif genv.solara or genv.SOLARA or genv.Solara then name = "Solara"
+        elseif genv.delta or genv.DELTA then name = "Delta"
+        elseif genv.codex or genv.CODEX then name = "Codex"
+        elseif genv.celery or genv.CELERY then name = "Celery"
+        elseif genv.fluxus or genv.FLUXUS then name = "Fluxus"
+        end
+    end
+
+    if not name or name == "" then
+        name = "Potassium"
+    end
+    return name
 end
 local myExecutor = getExecutor()
 loadLocalExecHistory()
@@ -168,14 +212,39 @@ local function getExecutorBadgeColor(execName)
     local low = string.lower(tostring(execName or ""))
     local greenCol = (HubTheme and HubTheme.green) or Color3.fromRGB(46, 204, 113)
     local accentCol = (HubTheme and HubTheme.accent) or Color3.fromRGB(218, 38, 38)
+
     if string.find(low, "potassium") then
         return greenCol
+    elseif string.find(low, "volt") then
+        return Color3.fromRGB(250, 204, 21)
     elseif string.find(low, "wave") then
-        return accentCol
-    elseif string.find(low, "solara") then
-        return Color3.fromRGB(245, 158, 11)
+        return Color3.fromRGB(14, 165, 233)
     elseif string.find(low, "synapse") then
-        return Color3.fromRGB(234, 88, 12)
+        return Color3.fromRGB(249, 115, 22)
+    elseif string.find(low, "solara") then
+        return Color3.fromRGB(251, 191, 36)
+    elseif string.find(low, "lucid") then
+        return Color3.fromRGB(168, 85, 247)
+    elseif string.find(low, "lynx") then
+        return Color3.fromRGB(59, 130, 246)
+    elseif string.find(low, "real") then
+        return Color3.fromRGB(16, 185, 129)
+    elseif string.find(low, "madium") then
+        return Color3.fromRGB(236, 72, 153)
+    elseif string.find(low, "atomic") then
+        return Color3.fromRGB(132, 204, 22)
+    elseif string.find(low, "isaeva") then
+        return Color3.fromRGB(217, 70, 239)
+    elseif string.find(low, "volcano") then
+        return Color3.fromRGB(239, 68, 68)
+    elseif string.find(low, "athena") then
+        return Color3.fromRGB(6, 182, 212)
+    elseif string.find(low, "velocity") then
+        return Color3.fromRGB(245, 158, 11)
+    elseif string.find(low, "sirhurt") then
+        return Color3.fromRGB(190, 18, 60)
+    elseif string.find(low, "xeno") then
+        return Color3.fromRGB(147, 51, 234)
     elseif string.find(low, "delta") then
         return Color3.fromRGB(168, 85, 247)
     elseif string.find(low, "codex") then
@@ -184,15 +253,68 @@ local function getExecutorBadgeColor(execName)
         return Color3.fromRGB(16, 185, 129)
     elseif string.find(low, "fluxus") then
         return Color3.fromRGB(6, 182, 212)
-    elseif string.find(low, "lynx") then
-        return Color3.fromRGB(59, 130, 246)
-    elseif string.find(low, "velocity") then
-        return Color3.fromRGB(14, 165, 233)
     elseif string.find(low, "wrd") or string.find(low, "wearedevs") then
         return Color3.fromRGB(239, 68, 68)
     end
     return Color3.fromRGB(110, 115, 125)
 end
+
+
+local BAO_STICKER_URL = "https://media.discordapp.net/stickers/1499067663496777729.png"
+local BAO_STICKER_FILE = "WASOR_Assets/bao_sticker.png"
+local cachedBaoAsset = nil
+
+local function getBaoStickerAsset()
+    if cachedBaoAsset then return cachedBaoAsset end
+    local customAssetFn = getcustomasset or getsynasset or (syn and syn.cache_replace)
+    if not customAssetFn then return nil end
+
+    pcall(function()
+        if makefolder and isfolder and not isfolder("WASOR_Assets") then
+            makefolder("WASOR_Assets")
+        end
+    end)
+
+    if isfile and isfile(BAO_STICKER_FILE) then
+        local ok, asset = pcall(customAssetFn, BAO_STICKER_FILE)
+        if ok and asset then
+            cachedBaoAsset = asset
+            return asset
+        end
+    end
+
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+    local data = nil
+    if req then
+        local ok, res = pcall(req, { Url = BAO_STICKER_URL, Method = "GET" })
+        if ok and res and (res.StatusCode == 200 or res.Status == 200) and res.Body then
+            data = res.Body
+        end
+    end
+    if not data and game.HttpGet then
+        local ok, res = pcall(function() return game:HttpGet(BAO_STICKER_URL) end)
+        if ok and res and #res > 100 then
+            data = res
+        end
+    end
+
+    if data and writefile then
+        pcall(writefile, BAO_STICKER_FILE, data)
+        if isfile and isfile(BAO_STICKER_FILE) then
+            local ok, asset = pcall(customAssetFn, BAO_STICKER_FILE)
+            if ok and asset then
+                cachedBaoAsset = asset
+                return asset
+            end
+        end
+    end
+
+    return nil
+end
+
+task.spawn(function()
+    pcall(getBaoStickerAsset)
+end)
 
 local function cleanUrlDecode(str)
     str = string.gsub(str, "+", " ")
@@ -241,8 +363,57 @@ local function isUserOnline(isoStr)
     return math.abs(nowUtc - userTime) <= 45
 end
 
+local deletedMessageIds = {}
+
+local FilterWords = {
+    "preto imundo", "preto fedorento", "negro imundo", "filho de macaco", "volta pra senzala", "macaco imundo",
+    "filho da puta", "filha da puta", "filhos da puta", "filhas da puta", "filhodaputa", "filhadaputa",
+    "vai tomar no seu cu", "vai tomar no cu", "tomar no seu cu", "tomar no cu", "vai se foder", "vai se fuder", "pau no cu",
+    "motherfucker", "dickhead",
+    "nigger", "niggers", "nigga", "niggas", "n1gger", "n1gga",
+    "macaco", "macacos", "macaca", "macacas", "crioulo", "crioula", "crioulos",
+    "chink", "gook", "kike", "wetback", "faggot", "faggots", "fag",
+    "arrombado", "arrombada", "arrombados", "arrombadas",
+    "desgraçado", "desgracado", "desgraçada", "desgracada",
+    "vagabundo", "vagabunda", "vagabundos", "vagabundas",
+    "vadia", "vadias", "piranha", "piranhas",
+    "retardado", "retardada", "retarded", "retard",
+    "buceta", "bucetas", "boceta",
+    "caralho", "caralhos", "cacete",
+    "viadinho", "viadão", "viadao", "traveco", "boiola", "viado", "bicha",
+    "puta", "putas", "putaria",
+    "merda", "merdas", "bosta", "bostas",
+    "cuzão", "cuzao",
+    "asshole", "bitch", "bitches", "fucking", "fucker", "fuck", "cunt", "stfu",
+    "fdp", "vtnc", "vsf", "tmnc"
+}
+
+table.sort(FilterWords, function(a, b)
+    return #a > #b
+end)
+
+local function filterProfanityAndSlurs(text)
+    if not text or type(text) ~= "string" then return "" end
+    local filtered = text
+    for _, pattern in ipairs(FilterWords) do
+        local pLen = #pattern
+        local low = string.lower(filtered)
+        local sIdx, eIdx = string.find(low, pattern, 1, true)
+        local safety = 0
+        while sIdx and safety < 25 do
+            safety = safety + 1
+            local stars = string.rep("*", pLen)
+            filtered = string.sub(filtered, 1, sIdx - 1) .. stars .. string.sub(filtered, eIdx + 1)
+            low = string.lower(filtered)
+            sIdx, eIdx = string.find(low, pattern, 1, true)
+        end
+    end
+    return filtered
+end
+
 local function sanitizeText(text)
     local clean = string.gsub(tostring(text or ""), "<[^>]*>", "")
+    clean = filterProfanityAndSlurs(clean)
     if #clean > 1000 then clean = string.sub(clean, 1, 1000) end
     return clean
 end
@@ -512,7 +683,7 @@ ResizeHandle.Parent = WindowFrame
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 28)
-TitleBar.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+TitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 TitleBar.BorderSizePixel = 0
 TitleBar.ClipsDescendants = false
 TitleBar.Parent = WindowFrame
@@ -523,7 +694,7 @@ local fillL = Instance.new("Frame")
 fillL.Name = "FillL"
 fillL.Size = UDim2.new(0, 6, 0, 6)
 fillL.Position = UDim2.new(0, 0, 1, -6)
-fillL.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+fillL.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 fillL.BorderSizePixel = 0
 fillL.ZIndex = 1
 fillL.Parent = TitleBar
@@ -532,16 +703,16 @@ local fillR = Instance.new("Frame")
 fillR.Name = "FillR"
 fillR.Size = UDim2.new(0, 6, 0, 6)
 fillR.Position = UDim2.new(1, -6, 1, -6)
-fillR.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+fillR.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 fillR.BorderSizePixel = 0
 fillR.ZIndex = 1
 fillR.Parent = TitleBar
 
 local titleBottomLine = Instance.new("Frame")
 titleBottomLine.Name = "TitleBottomLine"
-titleBottomLine.Size = UDim2.new(1, 0, 0, 1)
-titleBottomLine.Position = UDim2.new(0, 0, 1, -1)
-titleBottomLine.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
+titleBottomLine.Size = UDim2.new(1, 0, 0, 2)
+titleBottomLine.Position = UDim2.new(0, 0, 1, -2)
+titleBottomLine.BackgroundColor3 = HubTheme.accent
 titleBottomLine.BorderSizePixel = 0
 titleBottomLine.ZIndex = 2
 titleBottomLine.Parent = TitleBar
@@ -561,7 +732,7 @@ do
     tt.Size = UDim2.new(0, 210, 1, 0)
     tt.Position = UDim2.new(0, 32, 0, 0)
     tt.BackgroundTransparency = 1
-    tt.Text = "WASOR Network Chat Hub v4.8"
+    tt.Text = "WASOR Network Chat Hub v4.9"
     tt.TextColor3 = Color3.fromRGB(255, 255, 255)
     tt.Font = HubTheme.fontBold
     tt.TextSize = 11
@@ -960,7 +1131,7 @@ do
     ChatChannelTitle.TextXAlignment = Enum.TextXAlignment.Left
     ChatChannelTitle.Parent = h
 
-    ChatChannelDesc.Size = UDim2.new(0.5, 0, 1, 0)
+    ChatChannelDesc.Size = UDim2.new(0.5, -90, 1, 0)
     ChatChannelDesc.Position = UDim2.new(0.5, 0, 0, 0)
     ChatChannelDesc.BackgroundTransparency = 1
     ChatChannelDesc.Text = "Cross-game network communication"
@@ -969,6 +1140,40 @@ do
     ChatChannelDesc.TextSize = 11
     ChatChannelDesc.TextXAlignment = Enum.TextXAlignment.Right
     ChatChannelDesc.Parent = h
+
+    local ClearAllBtn = Instance.new("TextButton")
+    ClearAllBtn.Size = UDim2.new(0, 80, 0, 20)
+    ClearAllBtn.Position = UDim2.new(1, -80, 0, 4)
+    ClearAllBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
+    ClearAllBtn.BorderSizePixel = 0
+    ClearAllBtn.Font = HubTheme.fontBold
+    ClearAllBtn.Text = "🗑️ Clear"
+    ClearAllBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
+    ClearAllBtn.TextSize = 11
+    ClearAllBtn.Parent = h
+    Instance.new("UICorner", ClearAllBtn).CornerRadius = UDim.new(0, 4)
+    local cStroke = Instance.new("UIStroke", ClearAllBtn)
+    cStroke.Color = Color3.fromRGB(60, 30, 36)
+    cStroke.Thickness = 1
+
+    ClearAllBtn.MouseEnter:Connect(function()
+        ClearAllBtn.BackgroundColor3 = Color3.fromRGB(220, 38, 38)
+        ClearAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+    ClearAllBtn.MouseLeave:Connect(function()
+        ClearAllBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
+        ClearAllBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
+    end)
+
+    ClearAllBtn.MouseButton1Click:Connect(function()
+        for _, child in ipairs(ChatScrolling:GetChildren()) do
+            if child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+        ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
+        showToast("Chat cleared!", HubTheme.accent)
+    end)
 end
 
 local ChatScrolling = Instance.new("ScrollingFrame")
@@ -991,6 +1196,7 @@ end
 
 local TextBox = Instance.new("TextBox")
 local SendBtn = Instance.new("TextButton")
+local BaoBtn = Instance.new("ImageButton")
 do
     local bar = Instance.new("ScrollingFrame")
     bar.Size = UDim2.new(1, 0, 0, 24)
@@ -998,7 +1204,7 @@ do
     bar.BackgroundTransparency = 1
     bar.BorderSizePixel = 0
     bar.ScrollBarThickness = 0
-    bar.CanvasSize = UDim2.new(0, 440, 0, 0)
+    bar.CanvasSize = UDim2.new(0, 480, 0, 0)
     bar.ScrollingDirection = Enum.ScrollingDirection.X
     bar.Parent = ChatView
 
@@ -1007,13 +1213,50 @@ do
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 4)
 
+    -- Bao sticker shortcut in the emoji bar
+    local baoBarBtn = Instance.new("ImageButton")
+    baoBarBtn.Size = UDim2.new(0, 26, 0, 22)
+    baoBarBtn.BackgroundColor3 = HubTheme.cardBg
+    baoBarBtn.BorderSizePixel = 0
+    baoBarBtn.Parent = bar
+    Instance.new("UICorner", baoBarBtn).CornerRadius = UDim.new(0, 4)
+    local baoBarAsset = getBaoStickerAsset()
+    if baoBarAsset then
+        baoBarBtn.Image = baoBarAsset
+    else
+        local baoBarLbl = Instance.new("TextLabel", baoBarBtn)
+        baoBarLbl.Size = UDim2.new(1, 0, 1, 0)
+        baoBarLbl.BackgroundTransparency = 1
+        baoBarLbl.Text = "🥟"
+        baoBarLbl.TextSize = 13
+    end
+    baoBarBtn.MouseButton1Click:Connect(function()
+        sendChatMessage("[sticker:bao]")
+    end)
+
+    local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
+    for _, em in ipairs(emojis) do
+        local emBtn = Instance.new("TextButton")
+        emBtn.Size = UDim2.new(0, 26, 0, 22)
+        emBtn.BackgroundColor3 = HubTheme.cardBg
+        emBtn.Text = em
+        emBtn.TextSize = 12
+        emBtn.Parent = bar
+        Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
+        emBtn.MouseButton1Click:Connect(function()
+            TextBox.Text = TextBox.Text .. em .. " "
+            TextBox:CaptureFocus()
+        end)
+    end
+
     local inputC = Instance.new("Frame")
     inputC.Size = UDim2.new(1, 0, 0, 34)
     inputC.Position = UDim2.new(0, 0, 1, -34)
     inputC.BackgroundTransparency = 1
     inputC.Parent = ChatView
 
-    TextBox.Size = UDim2.new(1, -74, 1, 0)
+    -- TextBox positioned with room for BaoBtn and SendBtn
+    TextBox.Size = UDim2.new(1, -126, 1, 0)
     TextBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     TextBox.TextColor3 = Color3.fromRGB(242, 243, 245)
     TextBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 134)
@@ -1040,35 +1283,74 @@ do
         end
     end)
 
-    SendBtn.Size = UDim2.new(0, 68, 1, 0)
-    SendBtn.Position = UDim2.new(1, -68, 0, 0)
-    SendBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    -- Dedicated Bao Sticker button inside input bar
+    BaoBtn.Name = "BaoStickerBtn"
+    BaoBtn.Size = UDim2.new(0, 36, 1, 0)
+    BaoBtn.Position = UDim2.new(1, -120, 0, 0)
+    BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+    BaoBtn.BorderSizePixel = 0
+    BaoBtn.AutoButtonColor = true
+    BaoBtn.ZIndex = 5
+    BaoBtn.Parent = inputC
+    Instance.new("UICorner", BaoBtn).CornerRadius = UDim.new(0, 4)
+    local baoStroke = Instance.new("UIStroke", BaoBtn)
+    baoStroke.Color = Color3.fromRGB(50, 50, 60)
+    baoStroke.Thickness = 1
+
+    local baoAsset = getBaoStickerAsset()
+    if baoAsset then
+        BaoBtn.Image = baoAsset
+    else
+        local baoLbl = Instance.new("TextLabel", BaoBtn)
+        baoLbl.Size = UDim2.new(1, 0, 1, 0)
+        baoLbl.BackgroundTransparency = 1
+        baoLbl.Text = "🥟"
+        baoLbl.TextSize = 16
+    end
+
+    BaoBtn.MouseEnter:Connect(function()
+        baoStroke.Color = HubTheme.accent
+        BaoBtn.BackgroundColor3 = Color3.fromRGB(36, 36, 46)
+    end)
+    BaoBtn.MouseLeave:Connect(function()
+        baoStroke.Color = Color3.fromRGB(50, 50, 60)
+        BaoBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+    end)
+
+    BaoBtn.MouseButton1Click:Connect(function()
+        sendChatMessage("[sticker:bao]")
+    end)
+
+    -- Highly visible Send button with bold styling and contrast
+    SendBtn.Size = UDim2.new(0, 80, 1, 0)
+    SendBtn.Position = UDim2.new(1, -80, 0, 0)
+    SendBtn.BackgroundColor3 = HubTheme.accent
     SendBtn.BorderSizePixel = 0
     SendBtn.Text = "Send ⏎"
     SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     SendBtn.Font = HubTheme.fontBold
-    SendBtn.TextSize = 11
+    SendBtn.TextSize = 12
+    SendBtn.AutoButtonColor = true
+    SendBtn.ZIndex = 5
+    SendBtn.Visible = true
     SendBtn.Parent = inputC
     Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(0, 4)
+
+    local sendBorder = Instance.new("UIStroke", SendBtn)
+    sendBorder.Color = Color3.fromRGB(255, 255, 255)
+    sendBorder.Transparency = 0.8
+    sendBorder.Thickness = 1
 
     local sendGrad = Instance.new("UIGradient", SendBtn)
     sendGrad.Name = "SendGradient"
     sendGrad.Color = ColorSequence.new(HubTheme.accent, HubTheme.accentGradient or HubTheme.accent)
 
-    local emojis = {"😀", "😂", "🔥", "❤️", "💀", "👑", "🚀", "👍", "🎮", "⚡", "👋", "🎉", "✨", "👀", "💯"}
-    for _, em in ipairs(emojis) do
-        local emBtn = Instance.new("TextButton")
-        emBtn.Size = UDim2.new(0, 26, 0, 22)
-        emBtn.BackgroundColor3 = HubTheme.cardBg
-        emBtn.Text = em
-        emBtn.TextSize = 12
-        emBtn.Parent = bar
-        Instance.new("UICorner", emBtn).CornerRadius = UDim.new(0, 4)
-        emBtn.MouseButton1Click:Connect(function()
-            TextBox.Text = TextBox.Text .. em .. " "
-            TextBox:CaptureFocus()
-        end)
-    end
+    SendBtn.MouseEnter:Connect(function()
+        SendBtn.BackgroundTransparency = 0.15
+    end)
+    SendBtn.MouseLeave:Connect(function()
+        SendBtn.BackgroundTransparency = 0
+    end)
 end
 
 local HistoryView = Instance.new("Frame")
@@ -2623,6 +2905,10 @@ local function refreshChatUI(messages, adminPool)
 
     local hasMention = false
     for _, msg in ipairs(messages) do
+        local msgKey = tostring(msg.id or (tostring(msg.username or "") .. "_" .. tostring(msg.created_at or "") .. "_" .. tostring(msg.message or "")))
+        if deletedMessageIds[msgKey] or (msg.id and deletedMessageIds[tostring(msg.id)]) then
+            continue
+        end
         local uName = tostring(msg.username or "Unknown")
         local displayMsg = sanitizeText(msg.message)
         local isMentioned = string.find(string.lower(displayMsg), "@" .. string.lower(Username), 1, true) ~= nil
@@ -2660,6 +2946,10 @@ local function refreshChatUI(messages, adminPool)
     for _, child in ipairs(ChatScrolling:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 
     for _, msg in ipairs(messages) do
+        local msgKey = tostring(msg.id or (tostring(msg.username or "") .. "_" .. tostring(msg.created_at or "") .. "_" .. tostring(msg.message or "")))
+        if deletedMessageIds[msgKey] or (msg.id and deletedMessageIds[tostring(msg.id)]) then
+            continue
+        end
         local uName = tostring(msg.username or "Unknown")
         local displayMsg = sanitizeText(msg.message)
         local timeStr = formatIsoToTime(msg.created_at)
@@ -2807,19 +3097,102 @@ local function refreshChatUI(messages, adminPool)
         TimeLabel.TextSize = 10
         TimeLabel.Parent = HeaderLine
 
-        local MsgText = Instance.new("TextLabel")
-        MsgText.Size = UDim2.new(1, 0, 0, 0)
-        MsgText.Position = UDim2.new(0, 0, 0, 20)
-        MsgText.AutomaticSize = Enum.AutomaticSize.Y
-        MsgText.BackgroundTransparency = 1
-        MsgText.Font = HubTheme.font
-        MsgText.TextSize = 13
-        MsgText.TextColor3 = Color3.fromRGB(219, 222, 225)
-        MsgText.TextXAlignment = Enum.TextXAlignment.Left
-        MsgText.TextWrapped = true
-        MsgText.RichText = true
-        MsgText.Text = displayMsg
-        MsgText.Parent = ContentFrame
+        local DelBtn = Instance.new("TextButton")
+        DelBtn.LayoutOrder = 4
+        DelBtn.Size = UDim2.new(0, 20, 0, 16)
+        DelBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
+        DelBtn.BackgroundTransparency = 0.4
+        DelBtn.BorderSizePixel = 0
+        DelBtn.Font = HubTheme.fontBold
+        DelBtn.TextSize = 10
+        DelBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
+        DelBtn.Text = "✕"
+        DelBtn.Parent = HeaderLine
+        Instance.new("UICorner", DelBtn).CornerRadius = UDim.new(0, 3)
+
+        DelBtn.MouseEnter:Connect(function()
+            DelBtn.BackgroundColor3 = Color3.fromRGB(220, 38, 38)
+            DelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end)
+        DelBtn.MouseLeave:Connect(function()
+            DelBtn.BackgroundColor3 = Color3.fromRGB(36, 20, 24)
+            DelBtn.TextColor3 = Color3.fromRGB(240, 96, 108)
+        end)
+
+        DelBtn.MouseButton1Click:Connect(function()
+            deletedMessageIds[msgKey] = true
+            if msg.id then
+                deletedMessageIds[tostring(msg.id)] = true
+                task.spawn(function()
+                    pcall(function()
+                        request({
+                            Url = SUPABASE_URL .. "/rest/v1/executor_chat?id=eq." .. tostring(msg.id),
+                            Method = "DELETE",
+                            Headers = {
+                                ["apikey"] = SUPABASE_KEY,
+                                ["Authorization"] = "Bearer " .. SUPABASE_KEY
+                            }
+                        })
+                    end)
+                end)
+            end
+            MsgFrame:Destroy()
+            pcall(function()
+                local l = ChatScrolling:FindFirstChildOfClass("UIListLayout")
+                if l then
+                    ChatScrolling.CanvasSize = UDim2.new(0, 0, 0, l.AbsoluteContentSize.Y + 8)
+                end
+            end)
+            showToast("Message deleted!", HubTheme.accent)
+        end)
+
+        local isBaoSticker = (displayMsg == "[sticker:bao]")
+            or (string.find(displayMsg, "%[sticker:bao%]") ~= nil)
+            or (string.find(displayMsg, "1499067663496777729") ~= nil)
+            or (string.find(string.lower(displayMsg), ":bao:") ~= nil)
+
+        if isBaoSticker then
+            local stickerContainer = Instance.new("Frame")
+            stickerContainer.Size = UDim2.new(0, 85, 0, 85)
+            stickerContainer.Position = UDim2.new(0, 0, 0, 20)
+            stickerContainer.BackgroundTransparency = 1
+            stickerContainer.BorderSizePixel = 0
+            stickerContainer.Parent = ContentFrame
+
+            local stickerImg = Instance.new("ImageLabel")
+            stickerImg.Size = UDim2.new(1, 0, 1, 0)
+            stickerImg.BackgroundTransparency = 1
+            stickerImg.BorderSizePixel = 0
+
+            local baoAsset = getBaoStickerAsset()
+            if baoAsset then
+                stickerImg.Image = baoAsset
+                stickerImg.Parent = stickerContainer
+            else
+                local fallbackLbl = Instance.new("TextLabel")
+                fallbackLbl.Size = UDim2.new(1, 0, 1, 0)
+                fallbackLbl.BackgroundTransparency = 1
+                fallbackLbl.Font = HubTheme.fontBold
+                fallbackLbl.TextSize = 13
+                fallbackLbl.TextColor3 = HubTheme.accent
+                fallbackLbl.Text = "🥟 [Bao Sticker]"
+                fallbackLbl.Parent = stickerContainer
+            end
+        else
+            local MsgText = Instance.new("TextLabel")
+            MsgText.Size = UDim2.new(1, 0, 0, 0)
+            MsgText.Position = UDim2.new(0, 0, 0, 20)
+            MsgText.AutomaticSize = Enum.AutomaticSize.Y
+            MsgText.BackgroundTransparency = 1
+            MsgText.Font = HubTheme.font
+            MsgText.TextSize = 13
+            MsgText.TextColor3 = Color3.fromRGB(219, 222, 225)
+            MsgText.TextXAlignment = Enum.TextXAlignment.Left
+            MsgText.TextWrapped = true
+            MsgText.RichText = true
+            MsgText.Text = displayMsg
+            MsgText.Parent = ContentFrame
+        end
     end
 end
 
@@ -3484,28 +3857,99 @@ task.spawn(function()
     end
 end)
 
+local function syncWithWasorTheme()
+    local currentVH = _G.VoidHub
+    if not (currentVH and currentVH.State and currentVH.State.currentThemeColor) then
+        return false
+    end
+
+    local c1 = currentVH.State.currentThemeColor
+    local c2 = currentVH.State.currentThemeGradientColor or c1
+
+    if not c1 or (c1.R == 0 and c1.G == 0 and c1.B == 0) then
+        if currentVH.UI and currentVH.UI.themeColors then
+            c1 = currentVH.UI.themeColors["Red"] or Color3.fromRGB(218, 38, 38)
+            c2 = c1
+        else
+            c1 = Color3.fromRGB(218, 38, 38)
+            c2 = Color3.fromRGB(180, 28, 28)
+        end
+    end
+
+    HubTheme.accent = c1
+    HubTheme.accentGradient = c2
+
+    -- 1. Title bar accent line
+    if titleBottomLine and titleBottomLine.Parent then
+        titleBottomLine.BackgroundColor3 = c1
+    end
+
+    -- 2. Send button
+    if SendBtn and SendBtn.Parent then
+        SendBtn.BackgroundColor3 = c1
+        local sg = SendBtn:FindFirstChild("SendGradient")
+        if sg then
+            sg.Color = ColorSequence.new(c1, c2)
+        end
+    end
+
+    -- 3. Resize Handle
+    if ResizeHandle and ResizeHandle.Parent then
+        ResizeHandle.TextColor3 = c1
+    end
+
+    -- 4. Spectate HUD
+    if SpectateHud and SpectateHud.Parent then
+        local st = SpectateHud:FindFirstChildOfClass("UIStroke")
+        if st then st.Color = c1 end
+    end
+
+    -- 5. Bao sticker button stroke
+    if BaoBtn and BaoBtn.Parent then
+        local bs = BaoBtn:FindFirstChildOfClass("UIStroke")
+        if bs then bs.Color = c1 end
+    end
+
+    -- 6. Active Tab Lines
+    if TabChatLine and TabChatLine.Parent and currentView == "chat" then
+        TabChatLine.BackgroundColor3 = c1
+    end
+    if TabHistoryLine and TabHistoryLine.Parent and currentView == "history" then
+        TabHistoryLine.BackgroundColor3 = c1
+    end
+
+    return true
+end
+
+-- Hook into WASOR theme toggles if available for zero-latency sync
+pcall(function()
+    local currentVH = _G.VoidHub
+    if currentVH and currentVH.UI and type(currentVH.UI.themeToggles) == "table" then
+        table.insert(currentVH.UI.themeToggles, function()
+            pcall(syncWithWasorTheme)
+        end)
+    end
+end)
+
+-- Continuous watcher loop to ensure dynamic sync regardless of load order
 task.spawn(function()
-    local lastColor = nil
+    local lastSyncedCol = nil
     while running do
-        task.wait(1.0)
-        if running and VH and VH.State and VH.State.currentThemeColor then
-            local c1 = VH.State.currentThemeColor
-            local c2 = VH.State.currentThemeGradientColor or c1
-            if c1 ~= lastColor then
-                lastColor = c1
-                HubTheme.accent = c1
-                HubTheme.accentGradient = c2
-                if SendBtn and SendBtn.Parent then
-                    local sg = SendBtn:FindFirstChild("SendGradient")
-                    if sg then sg.Color = ColorSequence.new(c1, c2) else SendBtn.BackgroundColor3 = c1 end
-                end
-                if SpectateHud and SpectateHud.Parent then
-                    local st = SpectateHud:FindFirstChildOfClass("UIStroke")
-                    if st then st.Color = c1 end
+        task.wait(0.3)
+        if running then
+            local currentVH = _G.VoidHub
+            if currentVH and currentVH.State and currentVH.State.currentThemeColor then
+                local c = currentVH.State.currentThemeColor
+                if c ~= lastSyncedCol then
+                    lastSyncedCol = c
+                    pcall(syncWithWasorTheme)
                 end
             end
         end
     end
 end)
+
+-- Initial sync attempt
+pcall(syncWithWasorTheme)
 
 _G.ChatHub_Loaded = true
